@@ -1,0 +1,9 @@
+apiVersion: arjunnaik.in/v1alpha1
+kind: Scaler
+metadata:
+  name: example-scaler
+spec:
+  minReplicas: 1
+  maxReplicas: 10
+  scaleUp: 50
+  scaleDown: 20
