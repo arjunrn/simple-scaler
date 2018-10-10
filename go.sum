@@ -83,5 +83,11 @@ k8s.io/apimachinery v0.0.0-20180925152725-5ae511e0ed34 h1:Otg9Nj/P/e2Bdq1iTXDj2m
 k8s.io/apimachinery v0.0.0-20180925152725-5ae511e0ed34/go.mod h1:ccL7Eh7zubPUSh9A3USN90/OzHNSVN6zxzde07TDCL0=
 k8s.io/client-go v0.0.0-20180925153250-a5d40177db18 h1:ztkpI5SM19lnhNQTs6y1TKIVR0wOOQivahOXIpCcJj4=
 k8s.io/client-go v0.0.0-20180925153250-a5d40177db18/go.mod h1:7vJpHMYJwNQCWgzmNV+VYUl1zCObLyodBc8nIyt8L5s=
+k8s.io/heapster v1.5.4 h1:lH2GCZdqRmUKDoyqRgiXbRmIcevaPYTvkguOuYUl8gQ=
+k8s.io/heapster v1.5.4/go.mod h1:h1uhptVXMwC8xtZBYsPXKVi8fpdlYkTs6k949KozGrM=
 k8s.io/kube-openapi v0.0.0-20180711000925-0cf8f7e6ed1d h1:mn2F9UzCk6KGa7M/d2ibLyRtBQm7n6QvbCjDe/cDWSg=
 k8s.io/kube-openapi v0.0.0-20180711000925-0cf8f7e6ed1d/go.mod h1:BXM9ceUBTj2QnfH2MK1odQs778ajze1RxcmP6S8RVVc=
+k8s.io/kubernetes v1.12.1 h1:ud3qsh7xkSlwtboMEH1KLP2YlI0NYVYjVI/mX0jBRbY=
+k8s.io/kubernetes v1.12.1/go.mod h1:ocZa8+6APFNC2tX1DZASIbocyYT5jHzqFVsY5aoB7Jk=
+k8s.io/metrics v0.0.0-20180930035756-e06d172324b8 h1:X4QD7lZTvratiUl/V9AVDCVnwRA0jnbpGsNmyn4ZrM8=
+k8s.io/metrics v0.0.0-20180930035756-e06d172324b8/go.mod h1:a25VAbm3QT3xiVl1jtoF1ueAKQM149UdZ+L93ePfV3M=

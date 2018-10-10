@@ -1,10 +1,10 @@
 package v1alpha1
 
 import (
+	"github.com/arjunrn/dumb-scaler/pkg/apis/scaler"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"github.com/arjunrn/dumb-scaler/pkg/apis/scaler"
 )
 
 var SchemeGroupVersion = schema.GroupVersion{Group: scaler.GroupName, Version: "v1alpha1"}

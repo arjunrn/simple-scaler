@@ -28,4 +28,16 @@ spec:
               type: integer
               minimum: 0
               maximum: 100
+            target:
+              properties:
+                kind:
+                  type: string
+                name:
+                  type: string
+                apiVersion:
+                  type: string
+              required:
+                - kind
+                - name
+                - apiVersion
 

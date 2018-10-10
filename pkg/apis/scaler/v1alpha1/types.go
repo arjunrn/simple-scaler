@@ -16,9 +16,18 @@ type Scaler struct {
 
 // ScalerSpec is the specification for Scalers
 type ScalerSpec struct {
-	Label       string `json:"label"`
-	MinReplicas int32  `json:"minReplicas"`
-	MaxReplicas int32  `json:"maxReplicas"`
+	Label       string      `json:"label"`
+	MinReplicas int32       `json:"minReplicas"`
+	MaxReplicas int32       `json:"maxReplicas"`
+	Target      ScaleTarget `json:"target"`
+	CPUUsage    int32       `json:cpuUsage`
+}
+
+// ScaleTarget is the scaling target for the Scaler
+type ScaleTarget struct {
+	Name       string `json:"name"`
+	Kind       string `json:"kind"`
+	APIVersion string `json:"apiVersion"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

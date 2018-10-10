@@ -7,3 +7,7 @@ spec:
   maxReplicas: 10
   scaleUp: 50
   scaleDown: 20
+  target:
+    kind: Deployment
+    name: nginx
+    apiVersion: apps/v1
