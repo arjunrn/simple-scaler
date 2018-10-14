@@ -36,7 +36,7 @@ type Controller struct {
 	// scalerclientset is a clientset for our own API group
 	scalerclientset clientset.Interface
 
-	workQueue       workqueue.RateLimitingInterface
+	queue           workqueue.RateLimitingInterface
 	scalersSynced   cache.InformerSynced
 	metricsclient   metrics.MetricsClient
 	mapper          apimeta.RESTMapper
@@ -48,11 +48,12 @@ type Controller struct {
 func NewController(kubeclientset kubernetes.Interface, sampleclientset clientset.Interface,
 	scalerInfomer informers.ScalerInformer, podInformer coreinformers.PodInformer, metricsclient metrics.MetricsClient,
 	scaleNamespacer scaleclient.ScalesGetter, mapper apimeta.RESTMapper) *Controller {
+	const resyncInterval = 30 * time.Second
 	controller := &Controller{
 
 		kubeclientset:   kubeclientset,
 		scalerclientset: sampleclientset,
-		workQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Scalers"),
+		queue:           workqueue.NewNamedRateLimitingQueue(NewDefaultScalerRateLimiter(resyncInterval), "scalers"),
 
 		scalersSynced:   scalerInfomer.Informer().HasSynced,
 		metricsclient:   metricsclient,
@@ -62,12 +63,12 @@ func NewController(kubeclientset kubernetes.Interface, sampleclientset clientset
 	podLister := podInformer.Lister()
 	controller.replicaCalc = replicacalculator.NewReplicaCalculator(metricsclient, podLister)
 	glog.Info("Setting up event handlers")
-	scalerInfomer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	scalerInfomer.Informer().AddEventHandlerWithResyncPeriod(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.enqueueScaler,
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			controller.enqueueScaler(newObj)
 		},
-	})
+	}, resyncInterval)
 	return controller
 }
 
@@ -77,7 +78,7 @@ func NewController(kubeclientset kubernetes.Interface, sampleclientset clientset
 // workers to finish processing their current work items.
 func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer runtime.HandleCrash()
-	defer c.workQueue.ShutDown()
+	defer c.queue.ShutDown()
 
 	// Start the informer factories to begin populating the informer caches
 	glog.Info("Starting Scaler controller")
@@ -106,16 +107,19 @@ func (c *Controller) runWorker() {
 }
 
 func (c *Controller) processNextWorkItem() bool {
-	obj, shutdown := c.workQueue.Get()
+	key, shutdown := c.queue.Get()
 	if shutdown {
 		return false
 	}
+	defer c.queue.Done(key)
 
-	err := c.reconcileKey(obj.(string))
+	err := c.reconcileKey(key.(string))
 	if err == nil {
+		// don't "forget" here because we want to only process a given HPA once per resync interval
 		return true
 	}
-	c.workQueue.AddRateLimited(obj)
+
+	c.queue.AddRateLimited(key)
 	utilruntime.HandleError(err)
 	return true
 }
@@ -141,8 +145,9 @@ func (c *Controller) enqueueScaler(obj interface{}) {
 		runtime.HandleError(err)
 		return
 	}
-	c.workQueue.AddRateLimited(key)
+	c.queue.AddRateLimited(key)
 }
+
 func (c *Controller) reconcileScaler(scalerShared *v1alpha1.Scaler) error {
 	scaler := scalerShared.DeepCopy()
 	version, err := schema.ParseGroupVersion(scaler.Spec.Target.APIVersion)
