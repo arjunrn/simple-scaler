@@ -47,8 +47,7 @@ type Controller struct {
 // NewController returns a new sample controller
 func NewController(kubeclientset kubernetes.Interface, sampleclientset clientset.Interface,
 	scalerInfomer informers.ScalerInformer, podInformer coreinformers.PodInformer, metricsclient metrics.MetricsClient,
-	scaleNamespacer scaleclient.ScalesGetter, mapper apimeta.RESTMapper) *Controller {
-	const resyncInterval = 30 * time.Second
+	scaleNamespacer scaleclient.ScalesGetter, mapper apimeta.RESTMapper, resyncInterval time.Duration) *Controller {
 	controller := &Controller{
 
 		kubeclientset:   kubeclientset,

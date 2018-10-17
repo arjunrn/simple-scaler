@@ -28,5 +28,17 @@ func (c *ReplicaCalculator) GetResourceReplicas(currentReplicas int32, targetUti
 		return 0, 0, 0, time.Time{}, err
 	}
 	glog.Infof("metrics: %v", metrics)
+	pods, err := c.podLister.Pods(namespace).List(selector)
+	podResources := make(map[string]int64)
+	for _, p := range pods {
+		var podCpu int64 = 0
+		containers := p.Spec.Containers
+		for _, cont := range containers {
+			cpu := cont.Resources.Requests.Cpu().Value()
+			podCpu += cpu
+		}
+		podResources[p.Name] = podCpu
+
+	}
 	return 0, 0, 0, timestamp, nil
 }

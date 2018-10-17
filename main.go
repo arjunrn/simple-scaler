@@ -26,6 +26,10 @@ var (
 	kubeconfig string
 )
 
+const (
+	resyncInterval = 30 * time.Second
+)
+
 func main() {
 	flag.Parse()
 	glog.Info("starting the main()")
@@ -50,8 +54,6 @@ func main() {
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
 	scalerInformerFactory := scalerinformers.NewSharedInformerFactory(scalerClient, time.Second*30)
 
-
-
 	cachedClient := cacheddiscovery.NewMemCacheClient(kubeClient.Discovery())
 	// TODO: understand what this caching is all about and why its needed
 	cachedClient.Invalidate()
@@ -75,7 +77,7 @@ func main() {
 	podInformer := kubeInformerFactory.Core().V1().Pods()
 
 	controller := controller.NewController(kubeClient, scalerClient, scalerInformerFactory.Arjunnaik().V1alpha1().Scalers(),
-		podInformer, metricsClient, scaleGetter, mapper)
+		podInformer, metricsClient, scaleGetter, mapper, resyncInterval)
 
 	go kubeInformerFactory.Start(stopCh)
 	go scalerInformerFactory.Start(stopCh)
