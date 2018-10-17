@@ -28,6 +28,8 @@ spec:
               type: integer
               minimum: 0
               maximum: 100
+            evaluations:
+              type: integer
             target:
               properties:
                 kind:

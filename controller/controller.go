@@ -182,7 +182,7 @@ func (c *Controller) reconcileScaler(scalerShared *v1alpha1.Scaler) error {
 	} else if currentReplicas == 0 {
 		desiredReplicas = 1
 	} else {
-		replicas, _, _, _, err := c.computeReplicasForMetrics(scaler, scale, scaler.Spec.CPUUsage)
+		replicas, _, _, _, err := c.computeReplicasForMetrics(scaler, scale, scaler.Spec.ScaleUp)
 		if err == nil {
 			desiredReplicas = replicas
 		}
