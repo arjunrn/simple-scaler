@@ -21,14 +21,18 @@ func NewReplicaCalculator(client metrics.MetricsClient, lister corelisters.PodLi
 	}
 }
 
-func (c *ReplicaCalculator) GetResourceReplicas(currentReplicas int32, targetUtilization int32, resource v1.ResourceName,
+func (c *ReplicaCalculator) GetResourceReplicas(currentReplicas int32, downThreshold int32, upThreshold int32, resource v1.ResourceName,
 	namespace string, selector labels.Selector) (int32, int32, int64, time.Time, error) {
 	metrics, timestamp, err := c.metricsClient.GetResourceMetric(resource, namespace, selector)
 	if err != nil {
 		return 0, 0, 0, time.Time{}, err
 	}
 	glog.Infof("metrics: %v", metrics)
+
 	pods, err := c.podLister.Pods(namespace).List(selector)
+	if err != nil {
+		return 0, 0, 0, time.Time{}, err
+	}
 	podResources := make(map[string]int64)
 	for _, p := range pods {
 		var podCpu int64 = 0
