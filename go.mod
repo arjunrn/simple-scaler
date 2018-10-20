@@ -20,7 +20,7 @@ require (
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.1 // indirect
-	github.com/stretchr/testify v1.2.2 // indirect
+	github.com/stretchr/testify v1.2.2
 	golang.org/x/crypto v0.0.0-20180808211826-de0752318171 // indirect
 	golang.org/x/oauth2 v0.0.0-20170412232759-a6bd8cefa181 // indirect
 	golang.org/x/time v0.0.0-20161028155119-f51c12702a4d // indirect
