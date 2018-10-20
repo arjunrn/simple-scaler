@@ -181,7 +181,7 @@ func (c *Controller) reconcileScaler(scalerShared *v1alpha1.Scaler) error {
 	} else if currentReplicas == 0 {
 		desiredReplicas = 1
 	} else {
-		replicas, _, _, _, err := c.computeReplicasForMetrics(scaler, scale, scaler.Spec.ScaleUp)
+		replicas, _, _, _, err := c.computeReplicasForMetrics(scaler, scale, scaler.Spec.ScaleUp, scaler.Spec.ScaleDown)
 		if err == nil {
 			desiredReplicas = replicas
 		}
@@ -214,7 +214,7 @@ func (c *Controller) scaleForResourceMappings(namespace, name string, mappings [
 	return nil, schema.GroupResource{}, firstErr
 
 }
-func (c *Controller) computeReplicasForMetrics(scaler *v1alpha1.Scaler, scale *autoscalingv1.Scale, cpuUsage int32,
+func (c *Controller) computeReplicasForMetrics(scaler *v1alpha1.Scaler, scale *autoscalingv1.Scale, scaleUpCpu, scaleDownCpu int32,
 ) (replicas int32, metric string, status *autoscalingv2.MetricStatus, timestamp time.Time, err error) {
 	currentReplicas := scale.Status.Replicas
 
@@ -230,13 +230,13 @@ func (c *Controller) computeReplicasForMetrics(scaler *v1alpha1.Scaler, scale *a
 		return 0, "", nil, time.Time{}, fmt.Errorf(errMsg)
 	}
 
-	replicaCountProposal, timestampProposal, _, err := c.computeStatusForResourceMetric(currentReplicas, cpuUsage, scaler, selector)
+	replicaCountProposal, timestampProposal, _, err := c.computeStatusForResourceMetric(currentReplicas, scaleUpCpu, scaleDownCpu, scaler, selector)
 	return replicaCountProposal, "test", nil, timestampProposal, nil
 }
-func (c *Controller) computeStatusForResourceMetric(currentReplicas int32, cpuUsage int32, scaler *v1alpha1.Scaler, selector labels.Selector) (int32, time.Time, string, error) {
+func (c *Controller) computeStatusForResourceMetric(currentReplicas int32, scaleUpCpu int32, scaleDownCpu int32, scaler *v1alpha1.Scaler, selector labels.Selector) (int32, time.Time, string, error) {
 	// TODO: this is a hack. In the main controller the ResourceName is part of the metricSpec. Why?
 	name := corev1.ResourceName("cpu")
-	replicaCountProposal, _, _, timestampProposal, err := c.replicaCalc.GetResourceReplicas(currentReplicas, cpuUsage, name, scaler.Namespace, selector)
+	replicaCountProposal, _, _, timestampProposal, err := c.replicaCalc.GetResourceReplicas(currentReplicas, scaleUpCpu, scaleDownCpu, name, scaler.Namespace, selector)
 	if err != nil {
 		return 0, time.Time{}, "", err
 	}
