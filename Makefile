@@ -8,8 +8,8 @@ os = $(word 1, $@)
 GO111MODULE=on
 
 .PHONY: test
-test: lint
-	go test $(PKGS)
+test:
+	GO111MODULE=on go test $(PKGS)
 
 $(GOMETALINTER):
 	gometalinter --install &> /dev/null

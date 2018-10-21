@@ -14,6 +14,7 @@ type ReplicaCalculator struct {
 	podLister     corelisters.PodLister
 }
 
+// NewReplicaCalculator Creates a  new replica calculator
 func NewReplicaCalculator(client metrics.MetricsClient, lister corelisters.PodLister) *ReplicaCalculator {
 	return &ReplicaCalculator{
 		metricsClient: client,
@@ -21,6 +22,7 @@ func NewReplicaCalculator(client metrics.MetricsClient, lister corelisters.PodLi
 	}
 }
 
+// GetResourceReplicas get number of replicas for the deployment
 func (c *ReplicaCalculator) GetResourceReplicas(currentReplicas int32, downThreshold int32, upThreshold int32, resource v1.ResourceName,
 	namespace string, selector labels.Selector) (int32, int32, int64, time.Time, error) {
 	metrics, timestamp, err := c.metricsClient.GetResourceMetric(resource, namespace, selector)

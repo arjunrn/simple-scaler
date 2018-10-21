@@ -9,24 +9,25 @@ const (
 	bufferMaxSize = 15
 )
 
-type MetricsCache struct {
-	cache map[string]*ValuesHolder
-}
-
+// ValueHolder holders metric datapoints with last access time
 type ValuesHolder struct {
 	lastAccessed time.Time
 	buffer       *list.List
+	size         int
 }
 
-func NewValuesHolder() *ValuesHolder {
+// NewValuesHolder creates a new ValuesHolder
+func NewValuesHolder(size int) *ValuesHolder {
 	return &ValuesHolder{
 		lastAccessed: time.Now(),
 		buffer:       list.New(),
+		size:         size,
 	}
 }
 
+// Add adds a datapoint for pod metrics
 func (v *ValuesHolder) Add(value int) {
-	for v.buffer.Len() >= bufferMaxSize {
+	for v.buffer.Len() >= v.size {
 		head := v.buffer.Front()
 		v.buffer.Remove(head)
 	}
@@ -45,15 +46,24 @@ func (v *ValuesHolder) OlderThan(oldTimestamp time.Time) bool {
 	return v.lastAccessed.Before(oldTimestamp)
 }
 
-func NewMetricsCache() *MetricsCache {
+// MetricsCache cache for storing pod metrics
+type MetricsCache struct {
+	cache map[string]*ValuesHolder
+	ttl   time.Duration
+	size  int
+}
+
+func NewMetricsCache(size int, ttl time.Duration) *MetricsCache {
 	return &MetricsCache{
+		size:  size,
 		cache: make(map[string]*ValuesHolder),
+		ttl:   ttl,
 	}
 }
 
 func (c *MetricsCache) Add(name string, v int) {
 	if _, ok := c.cache[name]; !ok {
-		c.cache[name] = NewValuesHolder()
+		c.cache[name] = NewValuesHolder(c.size)
 	}
 	c.cache[name].Add(v)
 }
@@ -66,7 +76,7 @@ func (c *MetricsCache) Get(name string) []int {
 }
 
 func (c *MetricsCache) Gc() {
-	fifteenMsAgo := time.Now().Add(time.Duration(time.Minute * 15))
+	fifteenMsAgo := time.Now().Add(-c.ttl)
 	oldKeys := make([]string, 0)
 	for k, cache := range c.cache {
 		if cache.OlderThan(fifteenMsAgo) {

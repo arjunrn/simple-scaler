@@ -18,6 +18,7 @@ type deploymentHistory struct {
 	eventsLength int
 }
 
+// AddEvent adds an event to the deployment history
 func (h deploymentHistory) AddEvent(prevReplicas int32, nextReplicas int32) {
 	for h.events.Len() >= h.eventsLength {
 		front := h.events.Front()
@@ -25,6 +26,7 @@ func (h deploymentHistory) AddEvent(prevReplicas int32, nextReplicas int32) {
 	}
 	h.events.PushBack(&scalingEvent{previousReplicas: prevReplicas, newReplicas: nextReplicas, timestamp: time.Now()})
 }
+
 func (h deploymentHistory) canScale(cooldown int32, comparator func(int32, int32) bool) bool {
 
 	if cooldown > int32(h.events.Len()) {
@@ -47,12 +49,14 @@ func newDeploymentHistory(size int) deploymentHistory {
 	}
 }
 
+// DeploymentCache cache for storing deployment events
 type DeploymentCache struct {
 	deploymentHistories map[string]deploymentHistory
 	length              int
 	cacheTTL            time.Duration
 }
 
+// NewDeploymentCache creates a new DeploymentCache
 func NewDeploymentCache(length int, ttl time.Duration) *DeploymentCache {
 	return &DeploymentCache{
 		deploymentHistories: make(map[string]deploymentHistory),
@@ -61,6 +65,7 @@ func NewDeploymentCache(length int, ttl time.Duration) *DeploymentCache {
 	}
 }
 
+// Gc Cleans up deployment info for outdated Deployments
 func (c *DeploymentCache) Gc() {
 	oldestAllowed := time.Now().Add(-time.Duration(c.cacheTTL))
 	deleteCandidates := make([]string, 0)
@@ -75,6 +80,7 @@ func (c *DeploymentCache) Gc() {
 	}
 }
 
+// AddEvent adds an event for a particular deployment
 func (c *DeploymentCache) AddEvent(name string, prevReplicas, nextReplicas int32) {
 	if _, ok := c.deploymentHistories[name]; !ok {
 		c.deploymentHistories[name] = newDeploymentHistory(c.length)
@@ -82,12 +88,15 @@ func (c *DeploymentCache) AddEvent(name string, prevReplicas, nextReplicas int32
 	c.deploymentHistories[name].AddEvent(prevReplicas, nextReplicas)
 }
 
+// CanScaleUp checks if the deployment can be scaled up based on scaling information
 func (c *DeploymentCache) CanScaleUp(name string, cooldown int32) (bool, error) {
 	if int(cooldown) > c.length {
 		return false, fmt.Errorf("cooldown %d is longer than history %d", cooldown, c.length)
 	}
 	return c.canScale(name, cooldown, func(a, b int32) bool { return b > a }), nil
 }
+
+// CanScaleDown checks if the deployment can be scaled down based on scaling information
 func (c *DeploymentCache) CanScaleDown(name string, cooldown int32) (bool, error) {
 	if int(cooldown) > c.length {
 		return false, fmt.Errorf("cooldown %d is longer than history %d", cooldown, c.length)
