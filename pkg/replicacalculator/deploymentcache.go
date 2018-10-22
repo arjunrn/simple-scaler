@@ -2,7 +2,6 @@ package replicacalculator
 
 import (
 	"container/list"
-	"fmt"
 	"time"
 )
 
@@ -89,19 +88,19 @@ func (c *DeploymentCache) AddEvent(name string, prevReplicas, nextReplicas int32
 }
 
 // CanScaleUp checks if the deployment can be scaled up based on scaling information
-func (c *DeploymentCache) CanScaleUp(name string, cooldown int32) (bool, error) {
+func (c *DeploymentCache) CanScaleUp(name string, cooldown int32) bool {
 	if int(cooldown) > c.length {
-		return false, fmt.Errorf("cooldown %d is longer than history %d", cooldown, c.length)
+		return false
 	}
-	return c.canScale(name, cooldown, func(a, b int32) bool { return b > a }), nil
+	return c.canScale(name, cooldown, func(a, b int32) bool { return b > a })
 }
 
 // CanScaleDown checks if the deployment can be scaled down based on scaling information
-func (c *DeploymentCache) CanScaleDown(name string, cooldown int32) (bool, error) {
+func (c *DeploymentCache) CanScaleDown(name string, cooldown int32) bool {
 	if int(cooldown) > c.length {
-		return false, fmt.Errorf("cooldown %d is longer than history %d", cooldown, c.length)
+		return false
 	}
-	return c.canScale(name, cooldown, func(a, b int32) bool { return a > b }), nil
+	return c.canScale(name, cooldown, func(a, b int32) bool { return a > b })
 }
 
 func (c *DeploymentCache) canScale(name string, cooldown int32, comparator func(int32, int32) bool) bool {

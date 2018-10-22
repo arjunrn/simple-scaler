@@ -27,8 +27,6 @@ import (
 	"time"
 )
 
-const controllerAgentName = "scaler-controller"
-
 // Controller is the controller implementation for Foo resources
 type Controller struct {
 	// kubeclientset is a standard kubernetes clientset
@@ -42,32 +40,33 @@ type Controller struct {
 	mapper          apimeta.RESTMapper
 	scaleNamespacer scaleclient.ScalesGetter
 	replicaCalc     *replicacalculator.ReplicaCalculator
+	deploymentCache *replicacalculator.DeploymentCache
 }
 
 // NewController returns a new sample controller
 func NewController(kubeclientset kubernetes.Interface, sampleclientset clientset.Interface,
-	scalerInfomer informers.ScalerInformer, podInformer coreinformers.PodInformer, metricsclient metrics.MetricsClient,
+	scalerInformer informers.ScalerInformer, podInformer coreinformers.PodInformer, metricsclient metrics.MetricsClient,
 	scaleNamespacer scaleclient.ScalesGetter, mapper apimeta.RESTMapper, resyncInterval time.Duration) *Controller {
 	controller := &Controller{
-
 		kubeclientset:   kubeclientset,
 		scalerclientset: sampleclientset,
 		queue:           workqueue.NewNamedRateLimitingQueue(NewDefaultScalerRateLimiter(resyncInterval), "scalers"),
-
-		scalersSynced:   scalerInfomer.Informer().HasSynced,
+		scalersSynced:   scalerInformer.Informer().HasSynced,
 		metricsclient:   metricsclient,
 		scaleNamespacer: scaleNamespacer,
 	}
+	controller.deploymentCache = replicacalculator.NewDeploymentCache(15, 15*time.Minute)
 	controller.mapper = mapper
 	podLister := podInformer.Lister()
-	controller.replicaCalc = replicacalculator.NewReplicaCalculator(metricsclient, podLister)
+	controller.replicaCalc = replicacalculator.NewReplicaCalculator(metricsclient, podLister, controller.deploymentCache)
 	glog.Info("Setting up event handlers")
-	scalerInfomer.Informer().AddEventHandlerWithResyncPeriod(cache.ResourceEventHandlerFuncs{
+	scalerInformer.Informer().AddEventHandlerWithResyncPeriod(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.enqueueScaler,
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			controller.enqueueScaler(newObj)
 		},
 	}, resyncInterval)
+
 	return controller
 }
 
@@ -187,7 +186,23 @@ func (c *Controller) reconcileScaler(scalerShared *v1alpha1.Scaler) error {
 		}
 	}
 	glog.Infof("currentReplicas: %d desiredReplicas: %d, rescale: %v", currentReplicas, desiredReplicas, rescale)
-	return nil
+
+	if desiredReplicas < scaler.Spec.MinReplicas {
+		glog.Infof("cannot scaled down more than min replicas")
+		return nil
+	}
+
+	if desiredReplicas > scaler.Spec.MaxReplicas {
+		glog.Infof("cannot scale up more than max replicas")
+		return nil
+	}
+
+	scale.Spec.Replicas = desiredReplicas
+	_, err = c.scaleNamespacer.Scales(scale.Namespace).Update(targetGR, scale)
+	if err == nil {
+		c.deploymentCache.AddEvent(scaler.Name, currentReplicas, desiredReplicas)
+	}
+	return err
 }
 
 func (c *Controller) scaleForResourceMappings(namespace, name string, mappings []*apimeta.RESTMapping) (*autoscalingv1.Scale, schema.GroupResource, error) {
@@ -236,7 +251,7 @@ func (c *Controller) computeReplicasForMetrics(scaler *v1alpha1.Scaler, scale *a
 func (c *Controller) computeStatusForResourceMetric(currentReplicas int32, scaleUpCpu int32, scaleDownCpu int32, scaler *v1alpha1.Scaler, selector labels.Selector) (int32, time.Time, string, error) {
 	// TODO: this is a hack. In the main controller the ResourceName is part of the metricSpec. Why?
 	name := corev1.ResourceName("cpu")
-	replicaCountProposal, _, _, timestampProposal, err := c.replicaCalc.GetResourceReplicas(currentReplicas, scaleUpCpu, scaleDownCpu, name, scaler.Namespace, selector)
+	replicaCountProposal, timestampProposal, err := c.replicaCalc.GetResourceReplicas(currentReplicas, scaleUpCpu, scaleDownCpu, name, scaler, selector)
 	if err != nil {
 		return 0, time.Time{}, "", err
 	}

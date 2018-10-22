@@ -87,3 +87,28 @@ func (c *MetricsCache) Gc() {
 		delete(c.cache, k)
 	}
 }
+
+func (c *MetricsCache) IsAboveThreshold(name string, threshold int32, cycles int) bool {
+	return c.threshold(name, int(threshold), cycles, func(a, b int) bool { return a < b })
+}
+
+func (c *MetricsCache) IsBelowThreshold(name string, threshold int32, cycles int) bool {
+	return c.threshold(name, int(threshold), cycles, func(a, b int) bool { return a > b })
+}
+
+func (c *MetricsCache) threshold(name string, threshold int, cycles int, comparator func(int, int) bool) bool {
+	podCache := c.Get(name)
+	if podCache == nil {
+		return false
+	}
+	if len(podCache) < cycles {
+		return false
+	}
+	length := len(podCache)
+	for i := 0; i < length; i++ {
+		if comparator(podCache[i], threshold) {
+			return false
+		}
+	}
+	return true
+}
