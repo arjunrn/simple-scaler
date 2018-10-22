@@ -13,8 +13,6 @@ func TestNewDeploymentCache(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		cache.AddEvent(deploymentName, 5, 5)
 	}
-	_, err := cache.CanScaleUp(deploymentName, 10)
-	assert.Errorf(t, err, "no error when  cooldown larger than cache size")
 
 	ttl = time.Duration(1 * time.Second)
 	cache = NewDeploymentCache(10, ttl)
@@ -36,8 +34,7 @@ func TestDeploymentCache_CanScaleUp(t *testing.T) {
 	cache.AddEvent(deploymentName, 1, 1)
 	cache.AddEvent(deploymentName, 1, 1)
 	cache.AddEvent(deploymentName, 1, 3)
-	allowed, err := cache.CanScaleUp(deploymentName, 3)
-	assert.NoError(t, err, "error with cache size")
+	allowed := cache.CanScaleUp(deploymentName, 3)
 	assert.False(t, allowed, "allowed to scale up when when scale up happened in last 3 cycles")
 
 	cache = NewDeploymentCache(5, ttl)
@@ -45,8 +42,7 @@ func TestDeploymentCache_CanScaleUp(t *testing.T) {
 	cache.AddEvent(deploymentName, 1, 1)
 	cache.AddEvent(deploymentName, 1, 1)
 	cache.AddEvent(deploymentName, 1, 1)
-	allowed, err = cache.CanScaleUp(deploymentName, 3)
-	assert.NoError(t, err, "error with cache size")
+	allowed = cache.CanScaleUp(deploymentName, 3)
 	assert.True(t, allowed, "not allowed to scale up even when scale up not happened in last 3 cycles")
 }
 
@@ -57,8 +53,7 @@ func TestDeploymentCache_CanScaleDown(t *testing.T) {
 	cache.AddEvent(deploymentName, 3, 3)
 	cache.AddEvent(deploymentName, 3, 3)
 	cache.AddEvent(deploymentName, 3, 2)
-	allowed, err := cache.CanScaleDown(deploymentName, 3)
-	assert.NoError(t, err, "error with cache size")
+	allowed := cache.CanScaleDown(deploymentName, 3)
 	assert.False(t, allowed, "not allowed to scale down even when no scale down events in 3 cycles")
 
 	cache = NewDeploymentCache(5, ttl)
@@ -66,7 +61,6 @@ func TestDeploymentCache_CanScaleDown(t *testing.T) {
 	cache.AddEvent(deploymentName, 3, 3)
 	cache.AddEvent(deploymentName, 3, 3)
 	cache.AddEvent(deploymentName, 3, 3)
-	allowed, err = cache.CanScaleDown(deploymentName, 3)
-	assert.NoError(t, err, "error with cache size")
+	allowed = cache.CanScaleDown(deploymentName, 3)
 	assert.True(t, allowed, "not allowed to scale down even when scale down not happened in last 3 cycles")
 }
