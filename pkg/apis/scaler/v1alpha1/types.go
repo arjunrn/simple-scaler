@@ -11,7 +11,8 @@ import (
 type Scaler struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              ScalerSpec `json:"spec"`
+	Spec              ScalerSpec   `json:"spec"`
+	Status            ScalerStatus `json:"status"`
 }
 
 // ScalerSpec is the specification for Scalers
@@ -24,6 +25,12 @@ type ScalerSpec struct {
 	ScaleDown   int32       `json:"scaleDown"`
 	ScaleUp     int32       `json:"scaleUp"`
 	Evaluations int32       `json:"evaluations"`
+}
+
+// ScalerStatus is the status of the Scaler
+// +k8s:deepcopy-gen=true
+type ScalerStatus struct {
+	Condition string `json:"condition"`
 }
 
 // ScaleTarget is the scaling target for the Scaler
@@ -39,5 +46,5 @@ type ScaleTarget struct {
 type ScalerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
-	Items []Scaler `json:"items"`
+	Items           []Scaler `json:"items"`
 }

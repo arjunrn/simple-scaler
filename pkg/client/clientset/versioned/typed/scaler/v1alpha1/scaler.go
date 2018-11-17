@@ -37,6 +37,7 @@ type ScalersGetter interface {
 type ScalerInterface interface {
 	Create(*v1alpha1.Scaler) (*v1alpha1.Scaler, error)
 	Update(*v1alpha1.Scaler) (*v1alpha1.Scaler, error)
+	UpdateStatus(*v1alpha1.Scaler) (*v1alpha1.Scaler, error)
 	Delete(name string, options *v1.DeleteOptions) error
 	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
 	Get(name string, options v1.GetOptions) (*v1alpha1.Scaler, error)
@@ -114,6 +115,22 @@ func (c *scalers) Update(scaler *v1alpha1.Scaler) (result *v1alpha1.Scaler, err 
 		Namespace(c.ns).
 		Resource("scalers").
 		Name(scaler.Name).
+		Body(scaler).
+		Do().
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+
+func (c *scalers) UpdateStatus(scaler *v1alpha1.Scaler) (result *v1alpha1.Scaler, err error) {
+	result = &v1alpha1.Scaler{}
+	err = c.client.Put().
+		Namespace(c.ns).
+		Resource("scalers").
+		Name(scaler.Name).
+		SubResource("status").
 		Body(scaler).
 		Do().
 		Into(result)

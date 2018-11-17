@@ -34,7 +34,7 @@ func (c *ReplicaCalculator) GetResourceReplicas(currentReplicas int32, downThres
 	if err != nil {
 		return 0, time.Now(), err
 	}
-	glog.Infof("metrics: %v", metrics)
+	glog.Infof("metrics: %v", len(metrics))
 
 	pods, err := c.podLister.Pods(scaler.Namespace).List(selector)
 	if err != nil {

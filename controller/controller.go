@@ -12,7 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -44,12 +44,12 @@ type Controller struct {
 }
 
 // NewController returns a new sample controller
-func NewController(kubeclientset kubernetes.Interface, sampleclientset clientset.Interface,
+func NewController(kubeclientset kubernetes.Interface, scalerclientset clientset.Interface,
 	scalerInformer informers.ScalerInformer, podInformer coreinformers.PodInformer, metricsclient metrics.MetricsClient,
 	scaleNamespacer scaleclient.ScalesGetter, mapper apimeta.RESTMapper, resyncInterval time.Duration) *Controller {
 	controller := &Controller{
 		kubeclientset:   kubeclientset,
-		scalerclientset: sampleclientset,
+		scalerclientset: scalerclientset,
 		queue:           workqueue.NewNamedRateLimitingQueue(NewDefaultScalerRateLimiter(resyncInterval), "scalers"),
 		scalersSynced:   scalerInformer.Informer().HasSynced,
 		metricsclient:   metricsclient,
@@ -128,7 +128,7 @@ func (c *Controller) reconcileKey(key string) error {
 		return err
 	}
 
-	scaler, err := c.scalerclientset.ArjunnaikV1alpha1().Scalers(namespace).Get(name, v1.GetOptions{})
+	scaler, err := c.scalerclientset.ArjunnaikV1alpha1().Scalers(namespace).Get(name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
 		glog.Errorf("Scaler %s has been deleted", name)
 		return nil
@@ -165,7 +165,7 @@ func (c *Controller) reconcileScaler(scalerShared *v1alpha1.Scaler) error {
 	if err != nil {
 		return err
 	}
-	glog.Infof("Found scale: %v target group: %v", scale, targetGR)
+	glog.Infof("Found scale: %v target group: %v", scale.Name, targetGR.Resource)
 
 	currentReplicas := scale.Status.Replicas
 	desiredReplicas := int32(0)
@@ -202,10 +202,17 @@ func (c *Controller) reconcileScaler(scalerShared *v1alpha1.Scaler) error {
 
 	scale.Spec.Replicas = desiredReplicas
 	_, err = c.scaleNamespacer.Scales(scale.Namespace).Update(targetGR, scale)
-	if err == nil {
-		c.deploymentCache.AddEvent(scaler.Name, currentReplicas, desiredReplicas)
+	if err != nil {
+		return err
 	}
-	return err
+	c.deploymentCache.AddEvent(scaler.Name, currentReplicas, desiredReplicas)
+
+	scaler.Status.Condition = fmt.Sprintf("Scaled to %d replicas", desiredReplicas)
+	_, err = c.scalerclientset.ArjunnaikV1alpha1().Scalers(scaler.Namespace).Update(scaler)
+	if err != nil {
+		glog.Errorf("Failed to Update Scaler Status %v", err)
+	}
+	return nil
 }
 
 func (c *Controller) scaleForResourceMappings(namespace, name string, mappings []*apimeta.RESTMapping) (*autoscalingv1.Scale, schema.GroupResource, error) {
@@ -262,4 +269,9 @@ func (c *Controller) computeStatusForResourceMetric(currentReplicas int32, scale
 		return 0, time.Time{}, "", err
 	}
 	return replicaCountProposal, timestampProposal, "", nil
+}
+
+func (c *Controller) updateStatus(scaler *v1alpha1.Scaler) error {
+
+	return nil
 }

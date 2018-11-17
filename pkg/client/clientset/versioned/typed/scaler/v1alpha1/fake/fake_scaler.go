@@ -100,6 +100,18 @@ func (c *FakeScalers) Update(scaler *v1alpha1.Scaler) (result *v1alpha1.Scaler, 
 	return obj.(*v1alpha1.Scaler), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeScalers) UpdateStatus(scaler *v1alpha1.Scaler) (*v1alpha1.Scaler, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(scalersResource, "status", c.ns, scaler), &v1alpha1.Scaler{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.Scaler), err
+}
+
 // Delete takes name of the scaler and deletes it. Returns an error if one occurs.
 func (c *FakeScalers) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.
