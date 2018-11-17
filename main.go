@@ -27,7 +27,7 @@ var (
 )
 
 const (
-	resyncInterval = 30 * time.Second
+	resyncInterval = 10 * time.Second
 )
 
 func main() {

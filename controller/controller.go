@@ -183,7 +183,10 @@ func (c *Controller) reconcileScaler(scalerShared *v1alpha1.Scaler) error {
 		replicas, _, _, _, err := c.computeReplicasForMetrics(scaler, scale, scaler.Spec.ScaleUp, scaler.Spec.ScaleDown)
 		if err == nil {
 			desiredReplicas = replicas
+		} else {
+			glog.Errorf("error computing replicas: %v", err)
 		}
+
 	}
 	glog.Infof("currentReplicas: %d desiredReplicas: %d, rescale: %v", currentReplicas, desiredReplicas, rescale)
 
@@ -246,6 +249,9 @@ func (c *Controller) computeReplicasForMetrics(scaler *v1alpha1.Scaler, scale *a
 	}
 
 	replicaCountProposal, timestampProposal, _, err := c.computeStatusForResourceMetric(currentReplicas, scaleUpCpu, scaleDownCpu, scaler, selector)
+	if err != nil {
+		return 0, "error", nil, timestampProposal, err
+	}
 	return replicaCountProposal, "test", nil, timestampProposal, nil
 }
 func (c *Controller) computeStatusForResourceMetric(currentReplicas int32, scaleUpCpu int32, scaleDownCpu int32, scaler *v1alpha1.Scaler, selector labels.Selector) (int32, time.Time, string, error) {

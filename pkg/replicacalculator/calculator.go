@@ -53,7 +53,7 @@ func (c *ReplicaCalculator) GetResourceReplicas(currentReplicas int32, downThres
 	}
 
 	allPods := getResourcePodUtilizations(podResources, metrics)
-	glog.Infof("Utilizations for %d pods", len(allPods))
+	glog.Infof("Utilizations for %v pods", allPods)
 
 	for k, v := range allPods {
 		c.metricsCache.Add(k, v)
@@ -105,18 +105,18 @@ func getResourcePodUtilizations(podResources map[string]int64, podMetricsInfos m
 	for k := range allPods {
 		resources, ok := podResources[k]
 		if !ok {
-			allPods[k] = 100
+			allPods[k] = 0
 			continue
 		} else {
 			metric, ok := podMetricsInfos[k]
 			if !ok {
-				allPods[k] = 100
+				allPods[k] = 0
 				continue
 			}
 			if resources != 0 {
 				allPods[k] = int(float64(metric.Value) / float64(resources) * 100)
 			} else {
-				allPods[k] = 100
+				allPods[k] = 0
 			}
 
 		}
