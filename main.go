@@ -7,6 +7,7 @@ import (
 	scalerinformers "github.com/arjunrn/dumb-scaler/pkg/client/informers/externalversions"
 	"github.com/arjunrn/dumb-scaler/pkg/signals"
 	"github.com/golang/glog"
+	prometheus_api "github.com/prometheus/client_golang/api"
 	cacheddiscovery "k8s.io/client-go/discovery/cached"
 	"k8s.io/client-go/dynamic"
 	kubeinformers "k8s.io/client-go/informers"
@@ -22,8 +23,9 @@ import (
 )
 
 var (
-	masterURL  string
-	kubeconfig string
+	masterURL     string
+	kubeconfig    string
+	prometheusURL string
 )
 
 const (
@@ -76,8 +78,14 @@ func main() {
 
 	podInformer := kubeInformerFactory.Core().V1().Pods()
 
+	config := prometheus_api.Config{Address: prometheusURL}
+	prometheusClient, err := prometheus_api.NewClient(config)
+	if err != nil {
+		glog.Fatalf("failed to create prometheus client with address: %s", prometheusURL)
+	}
+
 	controller := controller.NewController(kubeClient, scalerClient, scalerInformerFactory.Arjunnaik().V1alpha1().Scalers(),
-		podInformer, metricsClient, scaleGetter, mapper, resyncInterval)
+		podInformer, metricsClient, scaleGetter, mapper, prometheusClient, resyncInterval)
 
 	go kubeInformerFactory.Start(stopCh)
 	go scalerInformerFactory.Start(stopCh)
@@ -90,4 +98,6 @@ func main() {
 func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 	flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	flag.StringVar(&prometheusURL, "prometheus-url", "", "Address of the prometheus server")
 }
+

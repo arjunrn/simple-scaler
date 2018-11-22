@@ -2,6 +2,7 @@ module github.com/arjunrn/dumb-scaler
 
 require (
 	github.com/davecgh/go-spew v0.0.0-20170626231645-782f4967f2dc // indirect
+	github.com/docker/distribution v2.6.2+incompatible // indirect
 	github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680 // indirect
 	github.com/gogo/protobuf v0.0.0-20170330071051-c0656edd0d9e // indirect
 	github.com/golang/glog v0.0.0-20141105023935-44145f04b68c
@@ -19,7 +20,10 @@ require (
 	github.com/onsi/gomega v1.4.2 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/prometheus/client_golang v0.9.1
+	github.com/prometheus/common v0.0.0-20181116084131-1f2c4f3cd6db
 	github.com/spf13/pflag v1.0.1 // indirect
+	github.com/stevvooe/resumable v0.0.0-20180830230917-22b14a53ba50 // indirect
 	github.com/stretchr/testify v1.2.2
 	golang.org/x/crypto v0.0.0-20180808211826-de0752318171 // indirect
 	golang.org/x/oauth2 v0.0.0-20170412232759-a6bd8cefa181 // indirect
@@ -28,10 +32,14 @@ require (
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/inf.v0 v0.9.0 // indirect
 	k8s.io/api v0.0.0-20180925152912-a191abe0b71e
+	k8s.io/apiextensions-apiserver v0.0.0-20181121072900-e8a638592964 // indirect
 	k8s.io/apimachinery v0.0.0-20180925152725-5ae511e0ed34
-	k8s.io/client-go v0.0.0-20180925153250-a5d40177db18
+	k8s.io/apiserver v0.0.0-20181121231732-e3c8fa95bba5 // indirect
+	k8s.io/client-go v9.0.0+incompatible //indirect
 	k8s.io/heapster v1.5.4 // indirect
+	k8s.io/klog v0.1.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20180711000925-0cf8f7e6ed1d // indirect
 	k8s.io/kubernetes v1.12.1
 	k8s.io/metrics v0.0.0-20180930035756-e06d172324b8
+	k8s.io/utils v0.0.0-20181115163542-0d26856f57b3 // indirect
 )

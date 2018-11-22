@@ -1,33 +1,42 @@
-BIN_DIR := $(GOPATH)/bin
-GOMETALINTER := $(BIN_DIR)/gometalinter
-PKGS := $(shell go list ./...)
-BINARY := scaler
-VERSION ?= vlatest
-PLATFORMS := windows linux darwin
-os = $(word 1, $@)
-GO111MODULE=on
+.PHONY: clean test check build.local build.linux build.osx build.docker build.push
 
-.PHONY: test
-test:
-	GO111MODULE=on go test $(PKGS)
+BINARY        ?= dumb-scaler
+VERSION       ?= $(shell git describe --tags --always --dirty)
+IMAGE         ?= arjunrn/$(BINARY)
+TAG           ?= $(VERSION)
+SOURCES       = $(shell find . -name '*.go')
+DOCKERFILE    ?= Dockerfile
+GOPKGS        = $(shell go list ./...)
+BUILD_FLAGS   ?= -v
+LDFLAGS       ?= -X main.version=$(VERSION) -w -s
 
-$(GOMETALINTER):
-	gometalinter --install &> /dev/null
-
-.PHONY: lint
-lint: $(GOMETALINTER)
-	gometalinter ./...
-
-
-.PHONY: $(PLATFORMS)
-$(PLATFORMS):
-	mkdir -p release
-	GO111MODULE=on GOOS=$(os) GOARCH=amd64 go build -o release/$(VERSION)-$(os)-amd64/$(BINARY)
-
-.PHONY: release
-release: windows linux darwin
+default: build.local
 
 clean:
-	rm -rf release/
+	rm -rf build
 
+test:
+	go test -v $(GOPKGS)
 
+check:
+	golint $(GOPKGS)
+	go vet -v $(GOPKGS)
+
+build.local: build/$(BINARY)
+build.linux: build/linux/$(BINARY)
+build.osx: build/osx/$(BINARY)
+
+build/$(BINARY): go.mod $(SOURCES)
+	CGO_ENABLED=0 go build -o build/$(BINARY) $(BUILD_FLAGS) -ldflags "$(LDFLAGS)" .
+
+build/linux/$(BINARY): go.mod $(SOURCES)
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build $(BUILD_FLAGS) -o build/linux/$(BINARY) -ldflags "$(LDFLAGS)" .
+
+build/osx/$(BINARY): go.mod $(SOURCES)
+	GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build $(BUILD_FLAGS) -o build/osx/$(BINARY) -ldflags "$(LDFLAGS)" .
+
+build.docker: build.linux
+	docker build --rm -t "$(IMAGE):$(TAG)" -f $(DOCKERFILE) .
+
+build.push: build.docker
+	docker push "$(IMAGE):$(TAG)"

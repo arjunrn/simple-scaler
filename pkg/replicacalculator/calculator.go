@@ -11,116 +11,91 @@ import (
 )
 
 type ReplicaCalculator struct {
-	metricsClient   metrics.MetricsClient
 	podLister       corelisters.PodLister
 	deploymentCache *DeploymentCache
-	metricsCache    *MetricsCache
+	metricsGetter   MetricsGetter
 }
 
 // NewReplicaCalculator Creates a  new replica calculator
-func NewReplicaCalculator(client metrics.MetricsClient, lister corelisters.PodLister, deploymentCache *DeploymentCache) *ReplicaCalculator {
+func NewReplicaCalculator(client metrics.MetricsClient, lister corelisters.PodLister, deploymentCache *DeploymentCache, metricsGetter MetricsGetter) *ReplicaCalculator {
 	return &ReplicaCalculator{
-		metricsClient:   client,
 		podLister:       lister,
-		metricsCache:    NewMetricsCache(15, 15*time.Minute),
 		deploymentCache: deploymentCache,
+		metricsGetter:   metricsGetter,
 	}
 }
 
 // GetResourceReplicas get number of replicas for the deployment
 func (c *ReplicaCalculator) GetResourceReplicas(currentReplicas int32, downThreshold int32, upThreshold int32, resource v1.ResourceName,
 	scaler *v1alpha1.Scaler, selector labels.Selector) (int32, time.Time, error) {
-	metrics, timestamp, err := c.metricsClient.GetResourceMetric(resource, scaler.Namespace, selector)
-	if err != nil {
-		return 0, time.Now(), err
-	}
-	glog.Infof("metrics: %v", len(metrics))
-
 	pods, err := c.podLister.Pods(scaler.Namespace).List(selector)
 	if err != nil {
-		return 0, timestamp, err
-	}
-	podResources := make(map[string]int64)
-	for _, p := range pods {
-		var podCpu int64 = 0
-		containers := p.Spec.Containers
-		for _, cont := range containers {
-			cpu := cont.Resources.Requests.Cpu().MilliValue()
-			podCpu += cpu
-		}
-		podResources[p.Name] = podCpu
-
+		return -1, time.Time{}, err
 	}
 
-	allPods := getResourcePodUtilizations(podResources, metrics)
-	glog.Infof("Utilizations for %v pods", allPods)
+	podNames := make([]string, len(pods))
+	for i, p := range pods {
+		podNames[i] = p.Name
+	}
 
-	for k, v := range allPods {
-		c.metricsCache.Add(k, v)
-	}
-	scaleUp, scaleDown := false, false
+	glog.Infof("%v", podNames)
 
-	for k := range allPods {
-		if c.metricsCache.IsAboveThreshold(k, upThreshold, 3) {
-			scaleUp = true
-			break
-		}
+	metrics, err := c.metricsGetter.GetPodMetrics(scaler.Namespace, podNames)
+	if err != nil {
+		return -1, time.Time{}, err
 	}
-	for k := range allPods {
-		if c.metricsCache.IsBelowThreshold(k, upThreshold, 3) {
-			scaleDown = true
-			break
-		}
-	}
+
+	glog.Infof("podmetrics: %v", metrics)
+
+	scaleUp, scaleDown := c.shouldScale(podNames, metrics, int(upThreshold), int(downThreshold))
 
 	if scaleUp && scaleDown {
 		scaleDown = false
 	}
-
 	proposedReplicas := currentReplicas
-	if scaleUp && c.deploymentCache.CanScaleUp(scaler.Name, 3) {
+
+	if scaleUp {
 		proposedReplicas += 1
-		glog.Infof("Scaling Up")
-	} else if scaleDown && c.deploymentCache.CanScaleDown(scaler.Name, 3) {
+	}
+	if scaleDown {
 		proposedReplicas -= 1
-		glog.Infof("Scaling Down")
-	} else {
-		glog.Infof("No Scaling Activity")
 	}
 
-	return proposedReplicas, timestamp, nil
+	return proposedReplicas, time.Now(), nil
 }
 
-func getResourcePodUtilizations(podResources map[string]int64, podMetricsInfos metrics.PodMetricsInfo) map[string]int {
-	allPods := make(map[string]int, len(podResources))
-	i := 0
-	for k := range podResources {
-		allPods[k] = 0
-		i++
-	}
-	for k := range podMetricsInfos {
-		allPods[k] = 0
-	}
-
-	for k := range allPods {
-		resources, ok := podResources[k]
-		if !ok {
-			allPods[k] = 0
+func (c *ReplicaCalculator) shouldScale(podNames []string, podMetrics map[string][]int, scaleUpThreshold, scaleDownThreshold int) (bool, bool) {
+	scaleUp := false
+	scaleDown := false
+	for _, p := range podNames {
+		var (
+			pMetrics []int
+			ok       bool
+		)
+		if pMetrics, ok = podMetrics[p]; !ok {
 			continue
-		} else {
-			metric, ok := podMetricsInfos[k]
-			if !ok {
-				allPods[k] = 0
-				continue
-			}
-			if resources != 0 {
-				allPods[k] = int(float64(metric.Value) / float64(resources) * 100)
-			} else {
-				allPods[k] = 0
-			}
-
 		}
+
+		if len(pMetrics) < 5 {
+			continue
+		}
+		pScaleUp := true
+		for _, p := range pMetrics {
+			if p < scaleUpThreshold {
+				pScaleUp = false
+				break
+			}
+		}
+		pScaleDown := true
+		for _, p := range pMetrics {
+			if p > scaleDownThreshold {
+				pScaleDown = false
+				break
+			}
+		}
+		scaleDown = pScaleDown
+		scaleUp = pScaleUp
 	}
 
-	return allPods
+	return scaleUp, scaleDown
 }

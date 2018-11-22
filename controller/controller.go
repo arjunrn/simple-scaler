@@ -7,6 +7,7 @@ import (
 	informers "github.com/arjunrn/dumb-scaler/pkg/client/informers/externalversions/scaler/v1alpha1"
 	"github.com/arjunrn/dumb-scaler/pkg/replicacalculator"
 	"github.com/golang/glog"
+	prometheus "github.com/prometheus/client_golang/api"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2beta2"
 	corev1 "k8s.io/api/core/v1"
@@ -34,31 +35,35 @@ type Controller struct {
 	// scalerclientset is a clientset for our own API group
 	scalerclientset clientset.Interface
 
-	queue           workqueue.RateLimitingInterface
-	scalersSynced   cache.InformerSynced
-	metricsclient   metrics.MetricsClient
-	mapper          apimeta.RESTMapper
-	scaleNamespacer scaleclient.ScalesGetter
-	replicaCalc     *replicacalculator.ReplicaCalculator
-	deploymentCache *replicacalculator.DeploymentCache
+	queue            workqueue.RateLimitingInterface
+	scalersSynced    cache.InformerSynced
+	metricsclient    metrics.MetricsClient
+	mapper           apimeta.RESTMapper
+	scaleNamespacer  scaleclient.ScalesGetter
+	replicaCalc      *replicacalculator.ReplicaCalculator
+	deploymentCache  *replicacalculator.DeploymentCache
+	prometheusClient prometheus.Client
 }
 
 // NewController returns a new sample controller
 func NewController(kubeclientset kubernetes.Interface, scalerclientset clientset.Interface,
 	scalerInformer informers.ScalerInformer, podInformer coreinformers.PodInformer, metricsclient metrics.MetricsClient,
-	scaleNamespacer scaleclient.ScalesGetter, mapper apimeta.RESTMapper, resyncInterval time.Duration) *Controller {
+	scaleNamespacer scaleclient.ScalesGetter, mapper apimeta.RESTMapper, prometheusClient prometheus.Client, resyncInterval time.Duration) *Controller {
 	controller := &Controller{
-		kubeclientset:   kubeclientset,
-		scalerclientset: scalerclientset,
-		queue:           workqueue.NewNamedRateLimitingQueue(NewDefaultScalerRateLimiter(resyncInterval), "scalers"),
-		scalersSynced:   scalerInformer.Informer().HasSynced,
-		metricsclient:   metricsclient,
-		scaleNamespacer: scaleNamespacer,
+		kubeclientset:    kubeclientset,
+		scalerclientset:  scalerclientset,
+		queue:            workqueue.NewNamedRateLimitingQueue(NewDefaultScalerRateLimiter(resyncInterval), "scalers"),
+		scalersSynced:    scalerInformer.Informer().HasSynced,
+		metricsclient:    metricsclient,
+		scaleNamespacer:  scaleNamespacer,
+		prometheusClient: prometheusClient,
 	}
 	controller.deploymentCache = replicacalculator.NewDeploymentCache(15, 15*time.Minute)
 	controller.mapper = mapper
 	podLister := podInformer.Lister()
-	controller.replicaCalc = replicacalculator.NewReplicaCalculator(metricsclient, podLister, controller.deploymentCache)
+
+	metricsGetter := replicacalculator.NewPrometheusGetter(prometheusClient)
+	controller.replicaCalc = replicacalculator.NewReplicaCalculator(metricsclient, podLister, controller.deploymentCache, metricsGetter)
 	glog.Info("Setting up event handlers")
 	scalerInformer.Informer().AddEventHandlerWithResyncPeriod(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.enqueueScaler,
