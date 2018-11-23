@@ -104,7 +104,7 @@ k8s.io/apimachinery v0.0.0-20180925152725-5ae511e0ed34 h1:Otg9Nj/P/e2Bdq1iTXDj2m
 k8s.io/apimachinery v0.0.0-20180925152725-5ae511e0ed34/go.mod h1:ccL7Eh7zubPUSh9A3USN90/OzHNSVN6zxzde07TDCL0=
 k8s.io/apiserver v0.0.0-20181121231732-e3c8fa95bba5 h1:l055lCDDjCXSb3HIk0E0IJaorhEUpvkOgSqXlyBwtKI=
 k8s.io/apiserver v0.0.0-20181121231732-e3c8fa95bba5/go.mod h1:6bqaTSOSJavUIXUtfaR9Os9JtTCm8ZqH2SUl2S60C4w=
-k8s.io/client-go v9.0.0+incompatible h1:NXWpDuPFeVB5lYP1fTqJUtwigjtmRXJNtndnN53ldGI=
+k8s.io/client-go v9.0.0+incompatible h1:2kqW3X2xQ9SbFvWZjGEHBLlWc1LG9JIJNXWkuqwdZ3A=
 k8s.io/client-go v9.0.0+incompatible/go.mod h1:7vJpHMYJwNQCWgzmNV+VYUl1zCObLyodBc8nIyt8L5s=
 k8s.io/heapster v1.5.4 h1:lH2GCZdqRmUKDoyqRgiXbRmIcevaPYTvkguOuYUl8gQ=
 k8s.io/heapster v1.5.4/go.mod h1:h1uhptVXMwC8xtZBYsPXKVi8fpdlYkTs6k949KozGrM=
