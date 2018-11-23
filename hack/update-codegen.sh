@@ -22,7 +22,6 @@ set -o pipefail
 GOPKG="github.com/arjunrn/dumb-scaler"
 CUSTOM_RESOURCE_NAME="scaler"
 CUSTOM_RESOURCE_VERSION="v1alpha1"
-GO111MODULE=on
 
 SCRIPT_ROOT=$(dirname ${BASH_SOURCE})/..
 

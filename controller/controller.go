@@ -6,10 +6,9 @@ import (
 	clientset "github.com/arjunrn/dumb-scaler/pkg/client/clientset/versioned"
 	informers "github.com/arjunrn/dumb-scaler/pkg/client/informers/externalversions/scaler/v1alpha1"
 	"github.com/arjunrn/dumb-scaler/pkg/replicacalculator"
-	"github.com/golang/glog"
 	prometheus "github.com/prometheus/client_golang/api"
+	log "github.com/sirupsen/logrus"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	autoscalingv2 "k8s.io/api/autoscaling/v2beta2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -24,7 +23,7 @@ import (
 	scaleclient "k8s.io/client-go/scale"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
-	"k8s.io/kubernetes/pkg/controller/podautoscaler/metrics"
+	"k8s.io/kubernetes/pkg/apis/core"
 	"time"
 )
 
@@ -37,34 +36,31 @@ type Controller struct {
 
 	queue            workqueue.RateLimitingInterface
 	scalersSynced    cache.InformerSynced
-	metricsclient    metrics.MetricsClient
 	mapper           apimeta.RESTMapper
 	scaleNamespacer  scaleclient.ScalesGetter
 	replicaCalc      *replicacalculator.ReplicaCalculator
-	deploymentCache  *replicacalculator.DeploymentCache
 	prometheusClient prometheus.Client
 }
 
 // NewController returns a new sample controller
 func NewController(kubeclientset kubernetes.Interface, scalerclientset clientset.Interface,
-	scalerInformer informers.ScalerInformer, podInformer coreinformers.PodInformer, metricsclient metrics.MetricsClient,
-	scaleNamespacer scaleclient.ScalesGetter, mapper apimeta.RESTMapper, prometheusClient prometheus.Client, resyncInterval time.Duration) *Controller {
+	scalerInformer informers.ScalerInformer, podInformer coreinformers.PodInformer,
+	scaleNamespacer scaleclient.ScalesGetter, mapper apimeta.RESTMapper, prometheusClient prometheus.Client,
+	resyncInterval time.Duration) *Controller {
 	controller := &Controller{
 		kubeclientset:    kubeclientset,
 		scalerclientset:  scalerclientset,
 		queue:            workqueue.NewNamedRateLimitingQueue(NewDefaultScalerRateLimiter(resyncInterval), "scalers"),
 		scalersSynced:    scalerInformer.Informer().HasSynced,
-		metricsclient:    metricsclient,
 		scaleNamespacer:  scaleNamespacer,
 		prometheusClient: prometheusClient,
 	}
-	controller.deploymentCache = replicacalculator.NewDeploymentCache(15, 15*time.Minute)
 	controller.mapper = mapper
 	podLister := podInformer.Lister()
 
-	metricsGetter := replicacalculator.NewPrometheusGetter(prometheusClient)
-	controller.replicaCalc = replicacalculator.NewReplicaCalculator(metricsclient, podLister, controller.deploymentCache, metricsGetter)
-	glog.Info("Setting up event handlers")
+	metricsSource := replicacalculator.NewPrometheusMetricsSource(prometheusClient)
+	controller.replicaCalc = replicacalculator.NewReplicaCalculator(podLister, metricsSource)
+	log.Info("Setting up event handlers")
 	scalerInformer.Informer().AddEventHandlerWithResyncPeriod(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.enqueueScaler,
 		UpdateFunc: func(oldObj, newObj interface{}) {
@@ -84,21 +80,21 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 	defer c.queue.ShutDown()
 
 	// Start the informer factories to begin populating the informer caches
-	glog.Info("Starting Scaler controller")
+	log.Info("Starting Scaler controller")
 
-	glog.Info("Waiting for informer caches to be synced")
+	log.Info("Waiting for informer caches to be synced")
 	if ok := cache.WaitForCacheSync(stopCh, c.scalersSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
-	glog.Info("starting workers")
+	log.Info("starting workers")
 	for i := 0; i < threadiness; i++ {
 		go wait.Until(c.runWorker, time.Second, stopCh)
 	}
 
-	glog.Info("Started workers")
+	log.Info("Started workers")
 	<-stopCh
-	glog.Info("Shutting down workers")
+	log.Info("Shutting down workers")
 
 	return nil
 }
@@ -135,7 +131,7 @@ func (c *Controller) reconcileKey(key string) error {
 
 	scaler, err := c.scalerclientset.ArjunnaikV1alpha1().Scalers(namespace).Get(name, metav1.GetOptions{})
 	if errors.IsNotFound(err) {
-		glog.Errorf("Scaler %s has been deleted", name)
+		log.Errorf("Scaler %s has been deleted", name)
 		return nil
 	}
 	return c.reconcileScaler(scaler)
@@ -165,18 +161,18 @@ func (c *Controller) reconcileScaler(scalerShared *v1alpha1.Scaler) error {
 	if err != nil {
 		return err
 	}
-	glog.Infof("Found mappings: %v", mappings)
+	log.Infof("Found mappings: %v", mappings)
 	scale, targetGR, err := c.scaleForResourceMappings(scaler.Namespace, scaler.Spec.Target.Name, mappings)
 	if err != nil {
 		return err
 	}
-	glog.Infof("Found scale: %v target group: %v", scale.Name, targetGR.Resource)
+	log.Infof("Found scale: %v target group: %v", scale.Name, targetGR.Resource)
 
 	currentReplicas := scale.Status.Replicas
 	desiredReplicas := int32(0)
 	rescale := true
 	if scale.Spec.Replicas == 0 {
-		glog.Infof("autoscaling disabled by target. %v", scale)
+		log.Infof("autoscaling disabled by target. %v", scale)
 		rescale = false
 	} else if currentReplicas > scaler.Spec.MaxReplicas {
 		desiredReplicas = scaler.Spec.MaxReplicas
@@ -185,23 +181,24 @@ func (c *Controller) reconcileScaler(scalerShared *v1alpha1.Scaler) error {
 	} else if currentReplicas == 0 {
 		desiredReplicas = 1
 	} else {
-		replicas, _, _, _, err := c.computeReplicasForMetrics(scaler, scale, scaler.Spec.ScaleUp, scaler.Spec.ScaleDown)
+		replicas, err := c.computeReplicasForMetrics(scaler, scale, scaler.Spec.ScaleUp, scaler.Spec.ScaleDown,
+			scaler.Spec.Evaluations, scaler.Spec.ScaleUpSize, scaler.Spec.ScaleDownSize)
 		if err == nil {
 			desiredReplicas = replicas
 		} else {
-			glog.Errorf("error computing replicas: %v", err)
+			log.Errorf("error computing replicas: %v", err)
 		}
 
 	}
-	glog.Infof("currentReplicas: %d desiredReplicas: %d, rescale: %v", currentReplicas, desiredReplicas, rescale)
+	log.Infof("currentReplicas: %d desiredReplicas: %d, rescale: %v", currentReplicas, desiredReplicas, rescale)
 
 	if desiredReplicas < scaler.Spec.MinReplicas {
-		glog.Infof("cannot scaled down more than min replicas")
+		log.Infof("cannot scaled down more than min replicas")
 		return nil
 	}
 
 	if desiredReplicas > scaler.Spec.MaxReplicas {
-		glog.Infof("cannot scale up more than max replicas")
+		log.Infof("cannot scale up more than max replicas")
 		return nil
 	}
 
@@ -210,12 +207,11 @@ func (c *Controller) reconcileScaler(scalerShared *v1alpha1.Scaler) error {
 	if err != nil {
 		return err
 	}
-	c.deploymentCache.AddEvent(scaler.Name, currentReplicas, desiredReplicas)
 
 	scaler.Status.Condition = fmt.Sprintf("Scaled to %d replicas", desiredReplicas)
 	_, err = c.scalerclientset.ArjunnaikV1alpha1().Scalers(scaler.Namespace).Update(scaler)
 	if err != nil {
-		glog.Errorf("Failed to Update Scaler Status %v", err)
+		log.Errorf("Failed to Update Scaler Status %v", err)
 	}
 	return nil
 }
@@ -244,36 +240,26 @@ func (c *Controller) scaleForResourceMappings(namespace, name string, mappings [
 	return nil, schema.GroupResource{}, firstErr
 
 }
-func (c *Controller) computeReplicasForMetrics(scaler *v1alpha1.Scaler, scale *autoscalingv1.Scale, scaleUpCpu, scaleDownCpu int32,
-) (replicas int32, metric string, status *autoscalingv2.MetricStatus, timestamp time.Time, err error) {
+func (c *Controller) computeReplicasForMetrics(scaler *v1alpha1.Scaler, scale *autoscalingv1.Scale, scaleUpCpu,
+scaleDownCpu int32, evaluations int32, scaleDownSize int32, scaleUpSize int32, ) (replicas int32, err error) {
 	currentReplicas := scale.Status.Replicas
 
 	if scale.Status.Selector == "" {
-		glog.Errorf("Target needs a selector: %v", scale)
-		return 0, "", nil, time.Time{}, fmt.Errorf("selector required")
+		log.Errorf("Target needs a selector: %v", scale)
+		return 0, fmt.Errorf("selector required")
 	}
 
 	selector, err := labels.Parse(scale.Status.Selector)
-
 	if err != nil {
-		errMsg := fmt.Sprintf("couldn't convert selector into a corresponding internal selector object: %v", err)
-		return 0, "", nil, time.Time{}, fmt.Errorf(errMsg)
+		return -1, fmt.Errorf("couldn't convert selector into a corresponding internal selector object: %v", err)
 	}
 
-	replicaCountProposal, timestampProposal, _, err := c.computeStatusForResourceMetric(currentReplicas, scaleUpCpu, scaleDownCpu, scaler, selector)
+	name := corev1.ResourceName(core.ResourceCPU)
+	replicaCountProposal, err := c.replicaCalc.GetResourceReplicas(currentReplicas, scaleUpCpu, scaleDownCpu, name, scaler, selector)
 	if err != nil {
-		return 0, "error", nil, timestampProposal, err
+		return 0, err
 	}
-	return replicaCountProposal, "test", nil, timestampProposal, nil
-}
-func (c *Controller) computeStatusForResourceMetric(currentReplicas int32, scaleUpCpu int32, scaleDownCpu int32, scaler *v1alpha1.Scaler, selector labels.Selector) (int32, time.Time, string, error) {
-	// TODO: this is a hack. In the main controller the ResourceName is part of the metricSpec. Why?
-	name := corev1.ResourceName("cpu")
-	replicaCountProposal, timestampProposal, err := c.replicaCalc.GetResourceReplicas(currentReplicas, scaleUpCpu, scaleDownCpu, name, scaler, selector)
-	if err != nil {
-		return 0, time.Time{}, "", err
-	}
-	return replicaCountProposal, timestampProposal, "", nil
+	return replicaCountProposal, nil
 }
 
 func (c *Controller) updateStatus(scaler *v1alpha1.Scaler) error {

@@ -1,7 +1,6 @@
 module github.com/arjunrn/dumb-scaler
 
 require (
-	github.com/davecgh/go-spew v0.0.0-20170626231645-782f4967f2dc // indirect
 	github.com/docker/distribution v2.6.2+incompatible // indirect
 	github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680 // indirect
 	github.com/gogo/protobuf v0.0.0-20170330071051-c0656edd0d9e // indirect
@@ -19,13 +18,12 @@ require (
 	github.com/modern-go/reflect2 v1.0.1 // indirect
 	github.com/onsi/gomega v1.4.2 // indirect
 	github.com/peterbourgon/diskv v2.0.1+incompatible // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v0.9.1
 	github.com/prometheus/common v0.0.0-20181116084131-1f2c4f3cd6db
+	github.com/sirupsen/logrus v1.2.0
 	github.com/spf13/pflag v1.0.1 // indirect
 	github.com/stevvooe/resumable v0.0.0-20180830230917-22b14a53ba50 // indirect
 	github.com/stretchr/testify v1.2.2
-	golang.org/x/crypto v0.0.0-20180808211826-de0752318171 // indirect
 	golang.org/x/oauth2 v0.0.0-20170412232759-a6bd8cefa181 // indirect
 	golang.org/x/time v0.0.0-20161028155119-f51c12702a4d // indirect
 	google.golang.org/appengine v1.2.0 // indirect
@@ -43,3 +41,5 @@ require (
 	k8s.io/metrics v0.0.0-20180930035756-e06d172324b8
 	k8s.io/utils v0.0.0-20181115163542-0d26856f57b3 // indirect
 )
+
+replace github.com/golang/glog => github.com/kubermatic/glog-logrus v0.0.0-20180829085450-3fa5b9870d1d

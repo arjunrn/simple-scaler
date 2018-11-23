@@ -2,35 +2,31 @@ package replicacalculator
 
 import (
 	"github.com/arjunrn/dumb-scaler/pkg/apis/scaler/v1alpha1"
-	"github.com/golang/glog"
+	log "github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	corelisters "k8s.io/client-go/listers/core/v1"
-	"k8s.io/kubernetes/pkg/controller/podautoscaler/metrics"
-	"time"
 )
 
 type ReplicaCalculator struct {
-	podLister       corelisters.PodLister
-	deploymentCache *DeploymentCache
-	metricsGetter   MetricsGetter
+	podLister         corelisters.PodLister
+	prometheusMetrics MetricsSource
 }
 
 // NewReplicaCalculator Creates a  new replica calculator
-func NewReplicaCalculator(client metrics.MetricsClient, lister corelisters.PodLister, deploymentCache *DeploymentCache, metricsGetter MetricsGetter) *ReplicaCalculator {
+func NewReplicaCalculator(lister corelisters.PodLister, prometheusMetrics MetricsSource) *ReplicaCalculator {
 	return &ReplicaCalculator{
-		podLister:       lister,
-		deploymentCache: deploymentCache,
-		metricsGetter:   metricsGetter,
+		podLister:         lister,
+		prometheusMetrics: prometheusMetrics,
 	}
 }
 
 // GetResourceReplicas get number of replicas for the deployment
 func (c *ReplicaCalculator) GetResourceReplicas(currentReplicas int32, downThreshold int32, upThreshold int32, resource v1.ResourceName,
-	scaler *v1alpha1.Scaler, selector labels.Selector) (int32, time.Time, error) {
+	scaler *v1alpha1.Scaler, selector labels.Selector) (int32, error) {
 	pods, err := c.podLister.Pods(scaler.Namespace).List(selector)
 	if err != nil {
-		return -1, time.Time{}, err
+		return -1, err
 	}
 
 	podNames := make([]string, len(pods))
@@ -38,14 +34,14 @@ func (c *ReplicaCalculator) GetResourceReplicas(currentReplicas int32, downThres
 		podNames[i] = p.Name
 	}
 
-	glog.Infof("%v", podNames)
+	log.Infof("%v", podNames)
 
-	metrics, err := c.metricsGetter.GetPodMetrics(scaler.Namespace, podNames)
+	metrics, err := c.prometheusMetrics.GetPodMetrics(scaler.Namespace, podNames)
 	if err != nil {
-		return -1, time.Time{}, err
+		return -1, err
 	}
 
-	glog.Infof("podmetrics: %v", metrics)
+	log.Infof("pod metrics: %v", metrics)
 
 	scaleUp, scaleDown := c.shouldScale(podNames, metrics, int(upThreshold), int(downThreshold))
 
@@ -61,7 +57,7 @@ func (c *ReplicaCalculator) GetResourceReplicas(currentReplicas int32, downThres
 		proposedReplicas -= 1
 	}
 
-	return proposedReplicas, time.Now(), nil
+	return proposedReplicas, nil
 }
 
 func (c *ReplicaCalculator) shouldScale(podNames []string, podMetrics map[string][]int, scaleUpThreshold, scaleDownThreshold int) (bool, bool) {
