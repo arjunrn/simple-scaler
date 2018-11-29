@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scaler
+  labels:
+    application: scaler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      application: scaler
+  template:
+    metadata:
+      labels:
+        application: scaler
+    spec:
+      containers:
+        - name: scaler
+          image: arjunrn/scaler
+          args:
+            - -prometheus-url=http://prometheus
+          resources:
+            requests:
+              cpu: 200m
+              memory: 300mb
+            limits:
+              cpu: 200m
+              memory: 300mb
+
