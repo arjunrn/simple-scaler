@@ -161,12 +161,12 @@ func (c *Controller) reconcileScaler(scalerShared *v1alpha1.Scaler) error {
 	if err != nil {
 		return err
 	}
-	log.Infof("Found mappings: %v", mappings)
+	log.Debugf("Found mappings: %v", mappings)
 	scale, targetGR, err := c.scaleForResourceMappings(scaler.Namespace, scaler.Spec.Target.Name, mappings)
 	if err != nil {
 		return err
 	}
-	log.Infof("Found scale: %v target group: %v", scale.Name, targetGR.Resource)
+	log.Debugf("Found scale: %v target group: %v", scale.Name, targetGR.Resource)
 
 	currentReplicas := scale.Status.Replicas
 	desiredReplicas := int32(0)
@@ -190,16 +190,22 @@ func (c *Controller) reconcileScaler(scalerShared *v1alpha1.Scaler) error {
 		}
 
 	}
-	log.Infof("currentReplicas: %d desiredReplicas: %d, rescale: %v", currentReplicas, desiredReplicas, rescale)
+	log.Debugf("currentReplicas: %d desiredReplicas: %d, rescale: %v", currentReplicas, desiredReplicas, rescale)
 
 	if desiredReplicas < scaler.Spec.MinReplicas {
-		log.Infof("cannot scaled down more than min replicas")
+		log.Debugf("cannot scaled down more than min replicas")
 		return nil
 	}
 
 	if desiredReplicas > scaler.Spec.MaxReplicas {
-		log.Infof("cannot scale up more than max replicas")
+		log.Debugf("cannot scale up more than max replicas")
 		return nil
+	}
+
+	if desiredReplicas == scale.Spec.Replicas {
+		log.Debugf("the current replicas and required replicas are the same")
+		return nil
+
 	}
 
 	scale.Spec.Replicas = desiredReplicas

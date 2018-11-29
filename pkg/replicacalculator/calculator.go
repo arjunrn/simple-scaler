@@ -34,14 +34,14 @@ func (c *ReplicaCalculator) GetResourceReplicas(currentReplicas int32, downThres
 		podNames[i] = p.Name
 	}
 
-	log.Infof("%v", podNames)
+	log.Debugf("%v", podNames)
 
 	metrics, err := c.prometheusMetrics.GetPodMetrics(scaler.Namespace, podNames)
 	if err != nil {
 		return -1, err
 	}
 
-	log.Infof("pod metrics: %v", metrics)
+	log.Debugf("pod metrics: %v", metrics)
 
 	scaleUp, scaleDown := c.shouldScale(podNames, metrics, int(upThreshold), int(downThreshold))
 

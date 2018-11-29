@@ -23,11 +23,9 @@ var (
 	masterURL     string
 	kubeconfig    string
 	prometheusURL string
+	resyncInterval int
 )
 
-const (
-	resyncInterval = 10 * time.Second
-)
 
 func main() {
 	flag.Parse()
@@ -78,8 +76,10 @@ func main() {
 		log.Fatalf("failed to create prometheus client with address: %s", prometheusURL)
 	}
 
+	interval:=time.Duration(resyncInterval)*time.Second
+
 	controller := controller.NewController(kubeClient, scalerClient, scalerInformerFactory.Arjunnaik().V1alpha1().Scalers(),
-		podInformer, scaleGetter, mapper, prometheusClient, resyncInterval)
+		podInformer, scaleGetter, mapper, prometheusClient, interval)
 
 	go kubeInformerFactory.Start(stopCh)
 	go scalerInformerFactory.Start(stopCh)
@@ -93,4 +93,5 @@ func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 	flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 	flag.StringVar(&prometheusURL, "prometheus-url", "", "Address of the prometheus server")
+	flag.IntVar(&resyncInterval, "resync-interval",30,"The resync interval for the controller in seconds")
 }

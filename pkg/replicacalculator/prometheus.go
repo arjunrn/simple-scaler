@@ -42,7 +42,7 @@ func (m *prometheusMetricsSource) GetPodMetrics(namespace string, podIDs []strin
 	start := end.Add(-time.Minute * 5)
 	queryRange := prometheusapi.Range{Start: start, End: end, Step: time.Minute}
 
-	log.Infof("query: %v", queryRange)
+	log.Debugf("query: %v", queryRange)
 	results, err := m.prometheusAPI.QueryRange(todo, query, queryRange)
 	if err != nil {
 		return nil, err
