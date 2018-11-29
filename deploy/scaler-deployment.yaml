@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: scaler
+  namespace: kube-system
   labels:
     application: scaler
 spec:
@@ -14,16 +15,17 @@ spec:
       labels:
         application: scaler
     spec:
+      serviceAccountName: system
       containers:
         - name: scaler
-          image: arjunrn/scaler
+          image: arjunrn/dumb-scaler:ca121dd
           args:
             - -prometheus-url=http://prometheus
           resources:
             requests:
               cpu: 200m
-              memory: 300mb
+              memory: 300Mi
             limits:
               cpu: 200m
-              memory: 300mb
+              memory: 300Mi
 
