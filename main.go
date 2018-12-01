@@ -20,18 +20,23 @@ import (
 )
 
 var (
-	masterURL     string
-	kubeconfig    string
-	prometheusURL string
+	masterURL      string
+	kubeconfig     string
+	prometheusURL  string
 	resyncInterval int
+	debugLogging   bool
 )
-
 
 func main() {
 	flag.Parse()
 
 	logger := log.New()
 	glog.SetLogger(logger.WithField("foo", "bar"))
+
+	log.Infof("Debug Flag: %v", debugLogging)
+	if debugLogging {
+		log.SetLevel(log.DebugLevel)
+	}
 
 	log.Info("starting the main()")
 	stopCh := signals.SetupSignalHandler()
@@ -76,7 +81,7 @@ func main() {
 		log.Fatalf("failed to create prometheus client with address: %s", prometheusURL)
 	}
 
-	interval:=time.Duration(resyncInterval)*time.Second
+	interval := time.Duration(resyncInterval) * time.Second
 
 	controller := controller.NewController(kubeClient, scalerClient, scalerInformerFactory.Arjunnaik().V1alpha1().Scalers(),
 		podInformer, scaleGetter, mapper, prometheusClient, interval)
@@ -93,5 +98,6 @@ func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 	flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
 	flag.StringVar(&prometheusURL, "prometheus-url", "", "Address of the prometheus server")
-	flag.IntVar(&resyncInterval, "resync-interval",30,"The resync interval for the controller in seconds")
+	flag.IntVar(&resyncInterval, "resync-interval", 30, "The resync interval for the controller in seconds")
+	flag.BoolVar(&debugLogging, "debug", false, "Print the debug logs")
 }

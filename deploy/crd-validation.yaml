@@ -10,7 +10,13 @@ spec:
     plural: scalers
   scope: Namespaced
   subresources:
-      status: {}
+      status:
+        properties:
+          lastScalingTimestamp:
+            type: string
+            format: date-time
+          condition:
+            type: string
   validation:
     openAPIV3Schema:
       properties:

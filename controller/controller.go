@@ -205,7 +205,17 @@ func (c *Controller) reconcileScaler(scalerShared *v1alpha1.Scaler) error {
 	if desiredReplicas == scale.Spec.Replicas {
 		log.Debugf("the current replicas and required replicas are the same")
 		return nil
+	}
 
+	lastUpdated, err := time.Parse(time.RFC3339, scaler.Status.LastScalingTimestamp)
+	if err != nil {
+		log.Debugf("failed to find last updated time")
+		lastUpdated = time.Now().Add(-time.Minute * 5)
+	}
+
+	if lastUpdated.Add(time.Minute * 1).After(time.Now()) {
+		log.Infof("still in cooldown period since last scaling period")
+		return nil
 	}
 
 	scale.Spec.Replicas = desiredReplicas
@@ -215,6 +225,7 @@ func (c *Controller) reconcileScaler(scalerShared *v1alpha1.Scaler) error {
 	}
 
 	scaler.Status.Condition = fmt.Sprintf("Scaled to %d replicas", desiredReplicas)
+	scaler.Status.LastScalingTimestamp = time.Now().Format(time.RFC3339)
 	_, err = c.scalerclientset.ArjunnaikV1alpha1().Scalers(scaler.Namespace).Update(scaler)
 	if err != nil {
 		log.Errorf("Failed to Update Scaler Status %v", err)

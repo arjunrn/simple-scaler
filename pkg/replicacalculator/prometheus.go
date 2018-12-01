@@ -35,7 +35,7 @@ func (m *prometheusMetricsSource) GetPodMetrics(namespace string, podIDs []strin
 	nameList := strings.Join(podIDs, "|")
 	log.Info(nameList)
 	query := fmt.Sprintf(prometheusQuery, nameList, namespace, nameList, namespace)
-	log.Info(query)
+	log.Debug(query)
 
 	now := time.Now()
 	end := now.Truncate(time.Minute)
@@ -51,7 +51,7 @@ func (m *prometheusMetricsSource) GetPodMetrics(namespace string, podIDs []strin
 		matrixResult model.Matrix
 		ok           bool
 	)
-	log.Infof("results: %v", results)
+	log.Debugf("results: %v", results)
 	if matrixResult, ok = results.(model.Matrix); !ok {
 		return nil, fmt.Errorf("unexpected return type from the prometheus api call: %v", results.Type())
 	}

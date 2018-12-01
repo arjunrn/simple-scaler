@@ -32,7 +32,8 @@ type ScalerSpec struct {
 // ScalerStatus is the status of the Scaler
 // +k8s:deepcopy-gen=true
 type ScalerStatus struct {
-	Condition string `json:"condition"`
+	Condition            string `json:"condition"`
+	LastScalingTimestamp string `json:"lastScalingTimestamp"`
 }
 
 // ScaleTarget is the scaling target for the Scaler
