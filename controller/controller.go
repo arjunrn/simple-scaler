@@ -148,6 +148,7 @@ func (c *Controller) enqueueScaler(obj interface{}) {
 }
 
 func (c *Controller) reconcileScaler(scalerShared *v1alpha1.Scaler) error {
+	log.Infof("now processing scaler: %s", scalerShared.Name)
 	scaler := scalerShared.DeepCopy()
 	version, err := schema.ParseGroupVersion(scaler.Spec.Target.APIVersion)
 	if err != nil {
@@ -170,40 +171,35 @@ func (c *Controller) reconcileScaler(scalerShared *v1alpha1.Scaler) error {
 
 	currentReplicas := scale.Status.Replicas
 	desiredReplicas := int32(0)
-	rescale := true
+
 	if scale.Spec.Replicas == 0 {
 		log.Infof("autoscaling disabled by target. %v", scale)
-		rescale = false
-	} else if currentReplicas > scaler.Spec.MaxReplicas {
-		desiredReplicas = scaler.Spec.MaxReplicas
-	} else if currentReplicas < scaler.Spec.MinReplicas {
-		desiredReplicas = scaler.Spec.MinReplicas
-	} else if currentReplicas == 0 {
-		desiredReplicas = 1
-	} else {
-		replicas, err := c.computeReplicasForMetrics(scaler, scale, scaler.Spec.ScaleUp, scaler.Spec.ScaleDown,
-			scaler.Spec.Evaluations, scaler.Spec.ScaleUpSize, scaler.Spec.ScaleDownSize)
-		if err == nil {
-			desiredReplicas = replicas
-		} else {
-			log.Errorf("error computing replicas: %v", err)
-		}
-
+		return nil
 	}
-	log.Debugf("currentReplicas: %d desiredReplicas: %d, rescale: %v", currentReplicas, desiredReplicas, rescale)
+
+	replicas, err := c.computeReplicasForMetrics(scaler, scale, scaler.Spec.ScaleUp, scaler.Spec.ScaleDown,
+		scaler.Spec.Evaluations, scaler.Spec.ScaleUpSize, scaler.Spec.ScaleDownSize)
+
+	if err == nil {
+		desiredReplicas = replicas
+	} else {
+		return err
+	}
+
+	log.Infof("target: %s currentReplicas: %d desiredReplicas: %d", scaler.Name, currentReplicas, desiredReplicas)
 
 	if desiredReplicas < scaler.Spec.MinReplicas {
-		log.Debugf("cannot scaled down more than min replicas")
+		log.Infof("cannot scaled down more than min replicas")
 		return nil
 	}
 
 	if desiredReplicas > scaler.Spec.MaxReplicas {
-		log.Debugf("cannot scale up more than max replicas")
+		log.Infof("cannot scale up more than max replicas")
 		return nil
 	}
 
 	if desiredReplicas == scale.Spec.Replicas {
-		log.Debugf("the current replicas and required replicas are the same")
+		log.Infof("the current replicas and required replicas are the same")
 		return nil
 	}
 

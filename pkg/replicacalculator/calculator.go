@@ -34,16 +34,16 @@ func (c *ReplicaCalculator) GetResourceReplicas(currentReplicas int32, downThres
 		podNames[i] = p.Name
 	}
 
-	log.Debugf("%v", podNames)
+	log.Debugf("pod names: %v", podNames)
 
-	metrics, err := c.prometheusMetrics.GetPodMetrics(scaler.Namespace, podNames)
+	metrics, err := c.prometheusMetrics.GetPodMetrics(scaler.Namespace, podNames, int(scaler.Spec.Evaluations))
 	if err != nil {
 		return -1, err
 	}
 
 	log.Debugf("pod metrics: %v", metrics)
 
-	scaleUp, scaleDown := c.shouldScale(podNames, metrics, int(upThreshold), int(downThreshold))
+	scaleUp, scaleDown := c.shouldScale(podNames, metrics, int(upThreshold), int(downThreshold), int(scaler.Spec.Evaluations))
 
 	if scaleUp && scaleDown {
 		scaleDown = false
@@ -60,7 +60,7 @@ func (c *ReplicaCalculator) GetResourceReplicas(currentReplicas int32, downThres
 	return proposedReplicas, nil
 }
 
-func (c *ReplicaCalculator) shouldScale(podNames []string, podMetrics map[string][]int, scaleUpThreshold, scaleDownThreshold int) (bool, bool) {
+func (c *ReplicaCalculator) shouldScale(podNames []string, podMetrics map[string][]int, scaleUpThreshold, scaleDownThreshold, evaluations int) (bool, bool) {
 	scaleUp := false
 	scaleDown := false
 	for _, p := range podNames {
@@ -72,7 +72,7 @@ func (c *ReplicaCalculator) shouldScale(podNames []string, podMetrics map[string
 			continue
 		}
 
-		if len(pMetrics) < 5 {
+		if len(pMetrics) < evaluations {
 			continue
 		}
 		pScaleUp := true

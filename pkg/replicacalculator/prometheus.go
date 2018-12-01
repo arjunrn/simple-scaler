@@ -17,7 +17,7 @@ const (
 )
 
 type MetricsSource interface {
-	GetPodMetrics(namespace string, podIDs []string) (map[string][]int, error)
+	GetPodMetrics(namespace string, podIDs []string, evaluations int) (map[string][]int, error)
 }
 
 func NewPrometheusMetricsSource(prometheusClient prometheusclient.Client) MetricsSource {
@@ -30,16 +30,15 @@ type prometheusMetricsSource struct {
 	prometheusAPI    prometheusapi.API
 }
 
-func (m *prometheusMetricsSource) GetPodMetrics(namespace string, podIDs []string) (map[string][]int, error) {
+func (m *prometheusMetricsSource) GetPodMetrics(namespace string, podIDs []string, evaluations int) (map[string][]int, error) {
 	todo := context.TODO()
 	nameList := strings.Join(podIDs, "|")
-	log.Info(nameList)
 	query := fmt.Sprintf(prometheusQuery, nameList, namespace, nameList, namespace)
-	log.Debug(query)
+	log.Debugf("prometheus query: %s", query)
 
 	now := time.Now()
 	end := now.Truncate(time.Minute)
-	start := end.Add(-time.Minute * 5)
+	start := end.Add(-time.Minute * time.Duration(evaluations-1))
 	queryRange := prometheusapi.Range{Start: start, End: end, Step: time.Minute}
 
 	log.Debugf("query: %v", queryRange)
@@ -51,7 +50,7 @@ func (m *prometheusMetricsSource) GetPodMetrics(namespace string, podIDs []strin
 		matrixResult model.Matrix
 		ok           bool
 	)
-	log.Debugf("results: %v", results)
+
 	if matrixResult, ok = results.(model.Matrix); !ok {
 		return nil, fmt.Errorf("unexpected return type from the prometheus api call: %v", results.Type())
 	}
