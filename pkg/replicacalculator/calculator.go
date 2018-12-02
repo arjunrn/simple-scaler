@@ -68,29 +68,38 @@ func (c *ReplicaCalculator) shouldScale(podNames []string, podMetrics map[string
 			pMetrics []int
 			ok       bool
 		)
+
+		// If metrics are not present then continue
 		if pMetrics, ok = podMetrics[p]; !ok {
 			continue
 		}
 
+		// If metrics are not sufficient then continue
 		if len(pMetrics) < evaluations {
 			continue
 		}
-		pScaleUp := true
-		for _, p := range pMetrics {
-			if p < scaleUpThreshold {
-				pScaleUp = false
-				break
+
+		if !scaleUp {
+			pScaleUp := true
+			for _, p := range pMetrics {
+				if p < scaleUpThreshold {
+					pScaleUp = false
+					break
+				}
 			}
+			scaleUp = pScaleUp
 		}
-		pScaleDown := true
-		for _, p := range pMetrics {
-			if p > scaleDownThreshold {
-				pScaleDown = false
-				break
+
+		if !scaleDown {
+			pScaleDown := true
+			for _, p := range pMetrics {
+				if p > scaleDownThreshold {
+					pScaleDown = false
+					break
+				}
 			}
+			scaleDown = pScaleDown
 		}
-		scaleDown = pScaleDown
-		scaleUp = pScaleUp
 	}
 
 	return scaleUp, scaleDown
