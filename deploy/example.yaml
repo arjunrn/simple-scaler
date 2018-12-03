@@ -3,10 +3,13 @@ kind: Scaler
 metadata:
   name: example-scaler
 spec:
+  evaluations: 2
   minReplicas: 1
   maxReplicas: 10
   scaleUp: 50
   scaleDown: 20
+  scaleUpSize: 2
+  scaleDownSize: 1
   target:
     kind: Deployment
     name: nginx

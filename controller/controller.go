@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"github.com/arjunrn/dumb-scaler/pkg/apis/scaler/v1alpha1"
 	clientset "github.com/arjunrn/dumb-scaler/pkg/client/clientset/versioned"
+	scalescheme "github.com/arjunrn/dumb-scaler/pkg/client/clientset/versioned/scheme"
 	informers "github.com/arjunrn/dumb-scaler/pkg/client/informers/externalversions/scaler/v1alpha1"
 	"github.com/arjunrn/dumb-scaler/pkg/replicacalculator"
 	prometheus "github.com/prometheus/client_golang/api"
 	log "github.com/sirupsen/logrus"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,10 +21,20 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	coreinformers "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
+	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	scaleclient "k8s.io/client-go/scale"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"time"
+)
+
+const (
+	controllerAgentName = "scaler-controller"
+	ErrComputeMetrics   = "ErrComputeMetrics"
+	ErrUpdateTarget     = "ErrUpdateTarget"
+	TargetUpdateSuccess = "TargetUpdateSuccess"
 )
 
 // Controller is the controller implementation for Foo resources
@@ -38,6 +50,7 @@ type Controller struct {
 	scaleNamespacer  scaleclient.ScalesGetter
 	replicaCalc      *replicacalculator.ReplicaCalculator
 	prometheusClient prometheus.Client
+	recorder         record.EventRecorder
 }
 
 // NewController returns a new sample controller
@@ -45,6 +58,11 @@ func NewController(kubeclientset kubernetes.Interface, scalerclientset clientset
 	scalerInformer informers.ScalerInformer, podInformer coreinformers.PodInformer,
 	scaleNamespacer scaleclient.ScalesGetter, mapper apimeta.RESTMapper, prometheusClient prometheus.Client,
 	resyncInterval time.Duration) *Controller {
+
+	utilruntime.Must(scalescheme.AddToScheme(scheme.Scheme))
+	eventBroadcaster := record.NewBroadcaster()
+	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: kubeclientset.CoreV1().Events("")})
+	recorder := eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: controllerAgentName})
 	controller := &Controller{
 		kubeclientset:    kubeclientset,
 		scalerclientset:  scalerclientset,
@@ -52,6 +70,7 @@ func NewController(kubeclientset kubernetes.Interface, scalerclientset clientset
 		scalersSynced:    scalerInformer.Informer().HasSynced,
 		scaleNamespacer:  scaleNamespacer,
 		prometheusClient: prometheusClient,
+		recorder:         recorder,
 	}
 	controller.mapper = mapper
 	podLister := podInformer.Lister()
@@ -180,6 +199,7 @@ func (c *Controller) reconcileScaler(scalerShared *v1alpha1.Scaler) error {
 	if err == nil {
 		desiredReplicas = replicas
 	} else {
+		c.recorder.Eventf(scaler, corev1.EventTypeWarning, ErrComputeMetrics, "failed to compute replicas: %v", err)
 		return err
 	}
 
@@ -213,17 +233,22 @@ func (c *Controller) reconcileScaler(scalerShared *v1alpha1.Scaler) error {
 
 	scale.Spec.Replicas = desiredReplicas
 	_, err = c.scaleNamespacer.Scales(scale.Namespace).Update(targetGR, scale)
+
 	if err != nil {
+		c.recorder.Eventf(scaler, corev1.EventTypeWarning, ErrUpdateTarget, "failed to update target %s/%s",
+			scale.Namespace, scale.Name)
 		return err
 	}
 
 	scaler.Status.Condition = fmt.Sprintf("Scaled to %d replicas", desiredReplicas)
 	scaler.Status.LastScalingTimestamp = time.Now().Format(time.RFC3339)
 	scaler.Status.CurrentReplicas = desiredReplicas
-	_, err = c.scalerclientset.ArjunnaikV1alpha1().Scalers(scaler.Namespace).Update(scaler)
+	_, err = c.scalerclientset.ArjunnaikV1alpha1().Scalers(scaler.Namespace).UpdateStatus(scaler)
 	if err != nil {
 		log.Errorf("Failed to Update Scaler Status %v", err)
 	}
+	c.recorder.Eventf(scaler, corev1.EventTypeNormal, TargetUpdateSuccess,
+		"successfully updated target %s/%s with replicas %d", scale.Namespace, scale.Name, desiredReplicas)
 	return nil
 }
 

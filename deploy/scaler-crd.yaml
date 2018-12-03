@@ -74,8 +74,8 @@ spec:
       type: integer
       description: The number of current replicas
       JSONPath: .status.currentReplicas
-    - name: Scaling Timestamp
-      type: string
+    - name: Last Scaling
+      type: date
       description: The timestamp from the last scaling activity
       JSONPath: .status.lastScalingTimestamp
     - name: Age
