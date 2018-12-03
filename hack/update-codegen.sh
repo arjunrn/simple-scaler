@@ -33,6 +33,10 @@ git clone https://github.com/kubernetes/gengo.git ${SCRIPT_ROOT}/vendor/k8s.io/g
 
 CODEGEN_PKG=${CODEGEN_PKG:-$(cd ${SCRIPT_ROOT}; ls -d -1 ./vendor/k8s.io/code-generator 2>/dev/null || echo ../code-generator)}
 
+pushd $CODEGEN_PKG
+git checkout release-1.12
+popd
+
 # generate the code with:
 # --output-base    because this script should also be able to run inside the vendor dir of
 #                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir
