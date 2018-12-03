@@ -21,10 +21,10 @@ package v1alpha1
 import (
 	time "time"
 
-	scalerv1alpha1 "github.com/arjunrn/dumb-scaler/pkg/apis/scaler/v1alpha1"
-	versioned "github.com/arjunrn/dumb-scaler/pkg/client/clientset/versioned"
-	internalinterfaces "github.com/arjunrn/dumb-scaler/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/arjunrn/dumb-scaler/pkg/client/listers/scaler/v1alpha1"
+	scalerv1alpha1 "github.com/arjunrn/simple-scaler/pkg/apis/scaler/v1alpha1"
+	versioned "github.com/arjunrn/simple-scaler/pkg/client/clientset/versioned"
+	internalinterfaces "github.com/arjunrn/simple-scaler/pkg/client/informers/externalversions/internalinterfaces"
+	v1alpha1 "github.com/arjunrn/simple-scaler/pkg/client/listers/scaler/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"

@@ -23,9 +23,9 @@ import (
 	sync "sync"
 	time "time"
 
-	versioned "github.com/arjunrn/dumb-scaler/pkg/client/clientset/versioned"
-	internalinterfaces "github.com/arjunrn/dumb-scaler/pkg/client/informers/externalversions/internalinterfaces"
-	scaler "github.com/arjunrn/dumb-scaler/pkg/client/informers/externalversions/scaler"
+	versioned "github.com/arjunrn/simple-scaler/pkg/client/clientset/versioned"
+	internalinterfaces "github.com/arjunrn/simple-scaler/pkg/client/informers/externalversions/internalinterfaces"
+	scaler "github.com/arjunrn/simple-scaler/pkg/client/informers/externalversions/scaler"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

@@ -1,4 +1,4 @@
-module github.com/arjunrn/dumb-scaler
+module github.com/arjunrn/simple-scaler
 
 require (
 	github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680 // indirect

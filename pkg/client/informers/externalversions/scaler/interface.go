@@ -19,8 +19,8 @@ limitations under the License.
 package arjunnaik
 
 import (
-	internalinterfaces "github.com/arjunrn/dumb-scaler/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/arjunrn/dumb-scaler/pkg/client/informers/externalversions/scaler/v1alpha1"
+	internalinterfaces "github.com/arjunrn/simple-scaler/pkg/client/informers/externalversions/internalinterfaces"
+	v1alpha1 "github.com/arjunrn/simple-scaler/pkg/client/informers/externalversions/scaler/v1alpha1"
 )
 
 // Interface provides access to each of this group's versions.

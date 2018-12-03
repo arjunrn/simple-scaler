@@ -2,11 +2,11 @@ package controller
 
 import (
 	"fmt"
-	"github.com/arjunrn/dumb-scaler/pkg/apis/scaler/v1alpha1"
-	clientset "github.com/arjunrn/dumb-scaler/pkg/client/clientset/versioned"
-	scalescheme "github.com/arjunrn/dumb-scaler/pkg/client/clientset/versioned/scheme"
-	informers "github.com/arjunrn/dumb-scaler/pkg/client/informers/externalversions/scaler/v1alpha1"
-	"github.com/arjunrn/dumb-scaler/pkg/replicacalculator"
+	"github.com/arjunrn/simple-scaler/pkg/apis/scaler/v1alpha1"
+	clientset "github.com/arjunrn/simple-scaler/pkg/client/clientset/versioned"
+	scalescheme "github.com/arjunrn/simple-scaler/pkg/client/clientset/versioned/scheme"
+	informers "github.com/arjunrn/simple-scaler/pkg/client/informers/externalversions/scaler/v1alpha1"
+	"github.com/arjunrn/simple-scaler/pkg/replicacalculator"
 	prometheus "github.com/prometheus/client_golang/api"
 	log "github.com/sirupsen/logrus"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"

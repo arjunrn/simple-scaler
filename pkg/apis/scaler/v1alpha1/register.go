@@ -1,7 +1,7 @@
 package v1alpha1
 
 import (
-	"github.com/arjunrn/dumb-scaler/pkg/apis/scaler"
+	"github.com/arjunrn/simple-scaler/pkg/apis/scaler"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"

@@ -19,7 +19,7 @@ set -o nounset
 set -o pipefail
 
 
-GOPKG="github.com/arjunrn/dumb-scaler"
+GOPKG="github.com/arjunrn/simple-scaler"
 CUSTOM_RESOURCE_NAME="scaler"
 CUSTOM_RESOURCE_VERSION="v1alpha1"
 

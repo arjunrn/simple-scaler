@@ -19,9 +19,9 @@ limitations under the License.
 package fake
 
 import (
-	clientset "github.com/arjunrn/dumb-scaler/pkg/client/clientset/versioned"
-	arjunnaikv1alpha1 "github.com/arjunrn/dumb-scaler/pkg/client/clientset/versioned/typed/scaler/v1alpha1"
-	fakearjunnaikv1alpha1 "github.com/arjunrn/dumb-scaler/pkg/client/clientset/versioned/typed/scaler/v1alpha1/fake"
+	clientset "github.com/arjunrn/simple-scaler/pkg/client/clientset/versioned"
+	arjunnaikv1alpha1 "github.com/arjunrn/simple-scaler/pkg/client/clientset/versioned/typed/scaler/v1alpha1"
+	fakearjunnaikv1alpha1 "github.com/arjunrn/simple-scaler/pkg/client/clientset/versioned/typed/scaler/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"

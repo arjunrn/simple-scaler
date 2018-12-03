@@ -2,10 +2,10 @@ package main
 
 import (
 	"flag"
-	"github.com/arjunrn/dumb-scaler/controller"
-	clientset "github.com/arjunrn/dumb-scaler/pkg/client/clientset/versioned"
-	scalerinformers "github.com/arjunrn/dumb-scaler/pkg/client/informers/externalversions"
-	"github.com/arjunrn/dumb-scaler/pkg/signals"
+	"github.com/arjunrn/simple-scaler/controller"
+	clientset "github.com/arjunrn/simple-scaler/pkg/client/clientset/versioned"
+	scalerinformers "github.com/arjunrn/simple-scaler/pkg/client/informers/externalversions"
+	"github.com/arjunrn/simple-scaler/pkg/signals"
 	"github.com/golang/glog"
 	prometheus_api "github.com/prometheus/client_golang/api"
 	log "github.com/sirupsen/logrus"

@@ -1,6 +1,6 @@
 .PHONY: clean test check build.local build.linux build.osx build.docker build.push
 
-BINARY        ?= dumb-scaler
+BINARY        ?= simple-scaler
 VERSION       ?= $(shell git describe --tags --always --dirty)
 IMAGE         ?= arjunrn/$(BINARY)
 TAG           ?= $(VERSION)
