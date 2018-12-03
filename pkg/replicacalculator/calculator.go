@@ -1,9 +1,7 @@
 package replicacalculator
 
 import (
-	"github.com/arjunrn/dumb-scaler/pkg/apis/scaler/v1alpha1"
 	log "github.com/sirupsen/logrus"
-	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	corelisters "k8s.io/client-go/listers/core/v1"
 )
@@ -22,9 +20,9 @@ func NewReplicaCalculator(lister corelisters.PodLister, prometheusMetrics Metric
 }
 
 // GetResourceReplicas get number of replicas for the deployment
-func (c *ReplicaCalculator) GetResourceReplicas(currentReplicas int32, downThreshold int32, upThreshold int32, resource v1.ResourceName,
-	scaler *v1alpha1.Scaler, selector labels.Selector) (int32, error) {
-	pods, err := c.podLister.Pods(scaler.Namespace).List(selector)
+func (c *ReplicaCalculator) GetResourceReplicas(namespace string, evaluations, currentReplicas,
+downThreshold, upThreshold, scaleUpSize, scaleDownSize int32, selector labels.Selector) (int32, error) {
+	pods, err := c.podLister.Pods(namespace).List(selector)
 	if err != nil {
 		return -1, err
 	}
@@ -36,31 +34,33 @@ func (c *ReplicaCalculator) GetResourceReplicas(currentReplicas int32, downThres
 
 	log.Debugf("pod names: %v", podNames)
 
-	metrics, err := c.prometheusMetrics.GetPodMetrics(scaler.Namespace, podNames, int(scaler.Spec.Evaluations))
+	metrics, err := c.prometheusMetrics.GetPodMetrics(namespace, podNames, evaluations)
 	if err != nil {
 		return -1, err
 	}
 
 	log.Debugf("pod metrics: %v", metrics)
 
-	scaleUp, scaleDown := c.shouldScale(podNames, metrics, int(upThreshold), int(downThreshold), int(scaler.Spec.Evaluations))
+	scaleUp, scaleDown := c.shouldScale(podNames, metrics, upThreshold, downThreshold, evaluations)
 
 	if scaleUp && scaleDown {
 		scaleDown = false
 	}
+
 	proposedReplicas := currentReplicas
 
 	if scaleUp {
-		proposedReplicas += 1
+		proposedReplicas += scaleUpSize
 	}
 	if scaleDown {
-		proposedReplicas -= 1
+		proposedReplicas -= scaleDownSize
 	}
 
 	return proposedReplicas, nil
 }
 
-func (c *ReplicaCalculator) shouldScale(podNames []string, podMetrics map[string][]int, scaleUpThreshold, scaleDownThreshold, evaluations int) (bool, bool) {
+func (c *ReplicaCalculator) shouldScale(podNames []string, podMetrics map[string][]int, scaleUpThreshold,
+scaleDownThreshold, evaluations int32) (bool, bool) {
 	scaleUp := false
 	scaleDown := false
 	for _, p := range podNames {
@@ -75,14 +75,14 @@ func (c *ReplicaCalculator) shouldScale(podNames []string, podMetrics map[string
 		}
 
 		// If metrics are not sufficient then continue
-		if len(pMetrics) < evaluations {
+		if len(pMetrics) < int(evaluations) {
 			continue
 		}
 
 		if !scaleUp {
 			pScaleUp := true
 			for _, p := range pMetrics {
-				if p < scaleUpThreshold {
+				if p < int(scaleUpThreshold) {
 					pScaleUp = false
 					break
 				}
@@ -93,7 +93,7 @@ func (c *ReplicaCalculator) shouldScale(podNames []string, podMetrics map[string
 		if !scaleDown {
 			pScaleDown := true
 			for _, p := range pMetrics {
-				if p > scaleDownThreshold {
+				if p > int(scaleDownThreshold) {
 					pScaleDown = false
 					break
 				}

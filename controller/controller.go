@@ -9,7 +9,6 @@ import (
 	prometheus "github.com/prometheus/client_golang/api"
 	log "github.com/sirupsen/logrus"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,7 +22,6 @@ import (
 	scaleclient "k8s.io/client-go/scale"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
-	"k8s.io/kubernetes/pkg/apis/core"
 	"time"
 )
 
@@ -177,8 +175,7 @@ func (c *Controller) reconcileScaler(scalerShared *v1alpha1.Scaler) error {
 		return nil
 	}
 
-	replicas, err := c.computeReplicasForMetrics(scaler, scale, scaler.Spec.ScaleUp, scaler.Spec.ScaleDown,
-		scaler.Spec.Evaluations, scaler.Spec.ScaleUpSize, scaler.Spec.ScaleDownSize)
+	replicas, err := c.computeReplicasForMetrics(scaler, scale)
 
 	if err == nil {
 		desiredReplicas = replicas
@@ -222,6 +219,7 @@ func (c *Controller) reconcileScaler(scalerShared *v1alpha1.Scaler) error {
 
 	scaler.Status.Condition = fmt.Sprintf("Scaled to %d replicas", desiredReplicas)
 	scaler.Status.LastScalingTimestamp = time.Now().Format(time.RFC3339)
+	scaler.Status.CurrentReplicas = desiredReplicas
 	_, err = c.scalerclientset.ArjunnaikV1alpha1().Scalers(scaler.Namespace).Update(scaler)
 	if err != nil {
 		log.Errorf("Failed to Update Scaler Status %v", err)
@@ -253,8 +251,7 @@ func (c *Controller) scaleForResourceMappings(namespace, name string, mappings [
 	return nil, schema.GroupResource{}, firstErr
 
 }
-func (c *Controller) computeReplicasForMetrics(scaler *v1alpha1.Scaler, scale *autoscalingv1.Scale, scaleUpCpu,
-scaleDownCpu int32, evaluations int32, scaleDownSize int32, scaleUpSize int32, ) (replicas int32, err error) {
+func (c *Controller) computeReplicasForMetrics(scaler *v1alpha1.Scaler, scale *autoscalingv1.Scale, ) (replicas int32, err error) {
 	currentReplicas := scale.Status.Replicas
 
 	if scale.Status.Selector == "" {
@@ -267,8 +264,9 @@ scaleDownCpu int32, evaluations int32, scaleDownSize int32, scaleUpSize int32, )
 		return -1, fmt.Errorf("couldn't convert selector into a corresponding internal selector object: %v", err)
 	}
 
-	name := corev1.ResourceName(core.ResourceCPU)
-	replicaCountProposal, err := c.replicaCalc.GetResourceReplicas(currentReplicas, scaleUpCpu, scaleDownCpu, name, scaler, selector)
+	replicaCountProposal, err := c.replicaCalc.GetResourceReplicas(scaler.Namespace, scaler.Spec.Evaluations,
+		currentReplicas, scaler.Spec.ScaleDown, scaler.Spec.ScaleUp, scaler.Spec.ScaleUpSize,
+		scaler.Spec.ScaleDownSize, selector)
 	if err != nil {
 		return 0, err
 	}

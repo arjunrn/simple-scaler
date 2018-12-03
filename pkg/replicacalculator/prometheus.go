@@ -17,7 +17,7 @@ const (
 )
 
 type MetricsSource interface {
-	GetPodMetrics(namespace string, podIDs []string, evaluations int) (map[string][]int, error)
+	GetPodMetrics(namespace string, podIDs []string, evaluations int32) (map[string][]int, error)
 }
 
 func NewPrometheusMetricsSource(prometheusClient prometheusclient.Client) MetricsSource {
@@ -30,7 +30,7 @@ type prometheusMetricsSource struct {
 	prometheusAPI    prometheusapi.API
 }
 
-func (m *prometheusMetricsSource) GetPodMetrics(namespace string, podIDs []string, evaluations int) (map[string][]int, error) {
+func (m *prometheusMetricsSource) GetPodMetrics(namespace string, podIDs []string, evaluations int32) (map[string][]int, error) {
 	todo := context.TODO()
 	nameList := strings.Join(podIDs, "|")
 	query := fmt.Sprintf(prometheusQuery, nameList, namespace, nameList, namespace)

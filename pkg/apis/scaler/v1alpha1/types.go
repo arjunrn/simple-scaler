@@ -34,6 +34,7 @@ type ScalerSpec struct {
 type ScalerStatus struct {
 	Condition            string `json:"condition"`
 	LastScalingTimestamp string `json:"lastScalingTimestamp"`
+	CurrentReplicas      int32  `json:"currentReplicas"`
 }
 
 // ScaleTarget is the scaling target for the Scaler

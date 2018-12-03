@@ -11,7 +11,7 @@ func TestNewReplicaCalculator(t *testing.T) {
 		podMetrics                                        map[string][]int
 		podNames                                          []string
 		scaleUp, scaleDown                                bool
-		scaleUpThreshold, scaleDownThreshold, evaluations int
+		scaleUpThreshold, scaleDownThreshold, evaluations int32
 	}{
 		{
 			name:               "metrics missing for pods and scaling up",

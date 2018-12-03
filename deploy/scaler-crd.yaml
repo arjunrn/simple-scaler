@@ -8,6 +8,9 @@ spec:
   names:
     kind: Scaler
     plural: scalers
+    singular: scaler
+    shortNames:
+      - scl
   scope: Namespaced
   subresources:
       status:
@@ -17,6 +20,8 @@ spec:
             format: date-time
           condition:
             type: string
+          currentReplicas:
+            type: integer
   validation:
     openAPIV3Schema:
       properties:
@@ -58,4 +63,21 @@ spec:
                 - kind
                 - name
                 - apiVersion
-
+          required:
+            - minReplicas
+            - maxReplicas
+            - scaleDown
+            - scaleUp
+            - evaluations
+  additionalPrinterColumns:
+    - name: Replicas
+      type: integer
+      description: The number of current replicas
+      JSONPath: .status.currentReplicas
+    - name: Scaling Timestamp
+      type: string
+      description: The timestamp from the last scaling activity
+      JSONPath: .status.lastScalingTimestamp
+    - name: Age
+      type: date
+      JSONPath: .metadata.creationTimestamp
