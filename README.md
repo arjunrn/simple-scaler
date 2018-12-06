@@ -2,9 +2,9 @@
 
 The default Horizontal Pod Autoscaler has several shortcomings which can be listed as follows:
 
-1. The scaling is not restricted in terms of how machines are started and stopped at the same time.
+1. The scaling is not restricted in terms of how pods are started and stopped at the same time.
 2. The scaling action is not based on historical data but on current usage.
-3. The thresholds for scaling up and scaling down is the same.
+3. The thresholds for scaling up and scaling down are the same.
 
 ## Usage
 
